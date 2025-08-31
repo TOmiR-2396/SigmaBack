@@ -1,1 +1,34 @@
-# SigmaBack
+# Gym Backend (Spring Boot + MySQL)
+
+Estructura mínima para que **la base de datos funcione** con JPA/Hibernate y MySQL.
+
+## Requisitos
+- Java 17+
+- Maven 3.9+
+- Docker (opcional, para levantar MySQL rápido)
+
+## Arranque rápido (con Docker para MySQL)
+```bash
+docker compose up -d
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_NAME=gymdb
+export DB_USER=gymuser
+export DB_PASSWORD=gympass
+mvn spring-boot:run
+```
+
+La app se inicia en `http://localhost:8080`. Hibernate creará/actualizará el esquema automáticamente (`spring.jpa.hibernate.ddl-auto=update`).
+
+## Módulos actuales
+- **Entidades**: `Member`, `MembershipPlan`, `Subscription`, `Attendance`
+- **Repositorios**: interfaces `JpaRepository` para CRUD básico
+- **Configuración**: `application.yml` usa variables de entorno para credenciales
+
+## Siguientes pasos sugeridos
+- Agregar controladores REST
+- DTOs y validaciones
+- Seguridad (Spring Security / JWT)
+- Migraciones con Flyway o Liquibase si prefieres control de esquema
+```
+
