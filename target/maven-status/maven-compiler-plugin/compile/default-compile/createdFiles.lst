@@ -1,0 +1,15 @@
+com\example\gym\model\Attendance.class
+com\example\gym\repository\AttendanceRepository.class
+com\example\gym\model\Member$MemberStatus.class
+com\example\gym\repository\MembershipPlanRepository.class
+com\example\gym\model\Subscription.class
+com\example\gym\repository\MemberRepository.class
+com\example\gym\model\Attendance$AttendanceBuilder.class
+com\example\gym\model\Member.class
+com\example\gym\model\MembershipPlan$MembershipPlanBuilder.class
+com\example\gym\model\Subscription$Status.class
+com\example\gym\model\MembershipPlan.class
+com\example\gym\GymApplication.class
+com\example\gym\model\Member$MemberBuilder.class
+com\example\gym\model\Subscription$SubscriptionBuilder.class
+com\example\gym\repository\SubscriptionRepository.class
