@@ -1,9 +1,10 @@
 package com.example.gym.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import java.time.LocalDate;
 import lombok.*;
+import java.time.LocalDate;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "members")
@@ -17,15 +18,12 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
     @Column(nullable = false)
     private String firstName;
 
-    @NotBlank
     @Column(nullable = false)
     private String lastName;
 
-    @Email
     @Column(unique = true)
     private String email;
 
@@ -39,6 +37,12 @@ public class Member {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberStatus status = MemberStatus.ACTIVE;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "member_roles",
+        joinColumns = @JoinColumn(name = "member_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles = new HashSet<>();
 
     public enum MemberStatus { ACTIVE, INACTIVE, SUSPENDED }
 }
