@@ -18,7 +18,22 @@
         },
         "description": "1. Usa 'Login User' para obtener el token JWT.\n2. Copia el valor de 'token' de la respuesta.\n3. Ve a la pestaña 'Variables' de la colección y crea una variable llamada 'jwt' con ese valor.\n4. Todos los endpoints protegidos (como Assign Trainer) usarán automáticamente el header Authorization: Bearer {{jwt}}."
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Guarda el token JWT automáticamente en la variable de entorno 'jwt'",
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "    pm.environment.set('jwt', jsonData.token);",
+              "}"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Register User",
@@ -28,11 +43,6 @@
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{jwt}}",
-            "type": "text"
           }
         ],
         "body": {
@@ -50,7 +60,7 @@
       "response": []
     },
     {
-      "name": "Login User",
+  "name": "Login User (devuelve JWT Bearer token)",
       "request": {
         "method": "POST",
         "header": [
@@ -81,6 +91,11 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt}}",
+            "type": "text"
           }
         ],
         "body": {
