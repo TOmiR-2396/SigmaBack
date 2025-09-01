@@ -7,12 +7,16 @@ import java.util.Set;
 import java.util.HashSet;
 
 @Entity
-@Table(name = "members")
+@Table(name = "users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Member {
+public class User {
+    @Column(nullable = false)
+    @Builder.Default
+    private String role = "MEMBER";
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,19 +40,19 @@ public class Member {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private MemberStatus status = MemberStatus.ACTIVE;
+    private UserStatus status = UserStatus.ACTIVE;
 
     @Column(nullable = false)
     private String password;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "member_roles",
-        joinColumns = @JoinColumn(name = "member_id"),
+    @JoinTable(name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id"))
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
-    public enum MemberStatus { ACTIVE, INACTIVE, SUSPENDED }
+    public enum UserStatus { ACTIVE, INACTIVE, SUSPENDED }
 
     public String getPassword() {
         return password;

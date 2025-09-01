@@ -24,4 +24,8 @@ public class Role {
         TRAINER,  // Asignado por OWNER
         OWNER     // Encargado de asignar TRAINERS
     }
+
+    public RoleName getName() {
+        return name;
+    }
 }
