@@ -7,7 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.gym.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -17,6 +19,8 @@ public class UserController {
     private final UserRepository userRepository;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtil jwtUtil;
 
     public UserController(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -27,21 +31,19 @@ public class UserController {
     // ================= Register =================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        // Validar email duplicado
         if (userRepository.existsByEmail(user.getEmail())) {
             return ResponseEntity.badRequest().body("Email already exists");
         }
-
-        // Encriptar la contraseña
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-
-        // Guardar el usuario
         User savedUser = userRepository.save(user);
-
-        // Asignar rol MEMBER por defecto
         roleService.assignDefaultRole(savedUser);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+        // No exponer la contraseña ni datos sensibles
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", savedUser.getId());
+        response.put("email", savedUser.getEmail());
+        response.put("role", savedUser.getRole());
+        //        response.put("status", savedUser.getStatus());
+        return ResponseEntity.ok(response);
     }
 
     // ================= Login =================
@@ -49,11 +51,32 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         User user = userRepository.findByEmail(request.get("email"))
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         if (!passwordEncoder.matches(request.get("password"), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
         }
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("role", user.getRole());
+        response.put("email", user.getEmail());
+        response.put("id", user.getId());
+        return ResponseEntity.ok(response);
+    }
 
-        return ResponseEntity.ok(user);
+    // ================= Asignar TRAINER =================
+    @PostMapping("/assign-trainer")
+    public ResponseEntity<?> assignTrainer(@RequestBody Map<String, Long> ids) {
+        Long userId = ids.get("userId");
+        // Busca el único usuario OWNER en la base
+        User owner = userRepository.findAll().stream()
+            .filter(u -> u.getRole() == User.UserRole.OWNER)
+            .findFirst()
+            .orElse(null);
+        if (owner == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No OWNER user found in the system");
+        }
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        roleService.assignTrainer(user);
+        return ResponseEntity.ok("Role changed to TRAINER by OWNER: " + owner.getEmail());
     }
 }

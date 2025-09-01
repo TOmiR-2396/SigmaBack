@@ -33,6 +33,7 @@ public class Subscription {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Status status = Status.ACTIVE;
 
     public enum Status { ACTIVE, EXPIRED, CANCELED }

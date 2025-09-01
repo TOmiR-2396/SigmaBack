@@ -24,5 +24,6 @@ public class Attendance {
     private User user;
 
     @Column(nullable = false)
+    @Builder.Default
     private LocalDateTime checkInTime = LocalDateTime.now();
 }

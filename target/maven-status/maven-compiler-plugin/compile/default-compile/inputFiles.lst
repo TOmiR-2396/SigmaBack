@@ -1,4 +1,6 @@
 C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\repository\RoleRepository.java
+C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\security\JwtUtil.java
+C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\security\JwtAuthenticationFilter.java
 C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\controller\UserController.java
 C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\GymApplication.java
 C:\Users\regue\Documents\proyecto_santi\SigmaBack\src\main\java\com\example\gym\repository\MembershipPlanRepository.java

@@ -6,13 +6,33 @@
   },
   "item": [
     {
-      "name": "Register Member",
+      "name": "INSTRUCCIONES (JWT)",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "",
+          "protocol": "",
+          "host": []
+        },
+        "description": "1. Usa 'Login User' para obtener el token JWT.\n2. Copia el valor de 'token' de la respuesta.\n3. Ve a la pestaña 'Variables' de la colección y crea una variable llamada 'jwt' con ese valor.\n4. Todos los endpoints protegidos (como Assign Trainer) usarán automáticamente el header Authorization: Bearer {{jwt}}."
+      },
+      "response": []
+    },
+    {
+      "name": "Register User",
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt}}",
+            "type": "text"
           }
         ],
         "body": {
@@ -30,7 +50,7 @@
       "response": []
     },
     {
-      "name": "Login Member",
+      "name": "Login User",
       "request": {
         "method": "POST",
         "header": [
@@ -49,6 +69,30 @@
           "host": ["localhost"],
           "port": "8080",
           "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assign Trainer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": 2\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/assign-trainer",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "auth", "assign-trainer"]
         }
       },
       "response": []

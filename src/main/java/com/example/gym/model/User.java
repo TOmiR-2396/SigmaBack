@@ -3,8 +3,6 @@ package com.example.gym.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
-import java.util.Set;
-import java.util.HashSet;
 
 @Entity
 @Table(name = "users")
@@ -13,9 +11,15 @@ import java.util.HashSet;
 @AllArgsConstructor
 @Builder
 public class User {
+    public Long getId() {
+        return id;
+    }
+    public enum UserRole { MEMBER, TRAINER, OWNER }
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private String role = "MEMBER";
+    private UserRole role = UserRole.MEMBER;
 
 
     @Id
@@ -36,21 +40,18 @@ public class User {
     private LocalDate birthDate;
 
     @Column(nullable = false)
+    @Builder.Default
     private LocalDate joinDate = LocalDate.now();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
     @Column(nullable = false)
     private String password;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id"))
-    @Builder.Default
-    private Set<Role> roles = new HashSet<>();
+    // Eliminado Set<Role> roles
 
     public enum UserStatus { ACTIVE, INACTIVE, SUSPENDED }
 
@@ -68,10 +69,10 @@ public class User {
         this.email = email;
     }
 
-    public Set<Role> getRoles() {
-        return roles;
+    public UserRole getRole() {
+        return role;
     }
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 }
