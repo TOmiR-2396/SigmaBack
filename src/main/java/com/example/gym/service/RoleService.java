@@ -17,7 +17,7 @@ public class RoleService {
     // Repositorios marcados como final para que Lombok genere el constructor y Spring los inyecte
     private final RoleRepository roleRepository;
     private final MemberRepository memberRepository;
-
+    
     // Asigna MEMBER por defecto a un usuario nuevo
     public void assignDefaultRole(Member member) {
         // Busca el rol MEMBER en la base

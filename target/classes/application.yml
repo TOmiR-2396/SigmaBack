@@ -4,6 +4,7 @@ spring:
     username: ${DB_USER:gymuser}
     password: ${DB_PASSWORD:gympass}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,9 +13,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
+
+  # Configuración de Spring Security mínima para test
+  security:
+    user:
+      name: admin
+      password: admin
+      roles: OWNER
 
 server:
   port: ${PORT:8080}
