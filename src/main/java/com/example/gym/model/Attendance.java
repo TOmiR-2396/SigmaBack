@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.*;
 
+// Import Member class if it exists in the same package or another package
+import com.example.gym.model.User;
+
 @Entity
 @Table(name = "attendances")
 @Data
@@ -17,8 +20,8 @@ public class Attendance {
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(nullable = false)
     private LocalDateTime checkInTime = LocalDateTime.now();
