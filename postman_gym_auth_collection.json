@@ -135,7 +135,7 @@
       "response": []
     },
     {
-      "name": "Editar Plan de Entrenamiento",
+      "name": "Editar Plan de Entrenamiento (PUT)",
       "request": {
         "method": "PUT",
         "header": [
@@ -144,7 +144,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Plan fuerza avanzado\",\n  \"description\": \"Rutina avanzada\"\n}"
+          "raw": "{\n  \"name\": \"Nuevo nombre opcional\",\n  \"description\": \"Nueva descripción opcional\",\n  \"user\": {\n    \"id\": 2\n  }\n}"
         },
         "url": {
           "raw": "http://localhost:8080/api/plans/edit/1",
@@ -152,7 +152,8 @@
           "host": ["localhost"],
           "port": "8080",
           "path": ["api", "plans", "edit", "1"]
-        }
+        },
+        "description": "Edita cualquier campo del plan. Solo envía los campos que quieras modificar. Ejemplo: solo 'name', solo 'description', o también el usuario asignado."
       },
       "response": []
     },

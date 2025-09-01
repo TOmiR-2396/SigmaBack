@@ -41,7 +41,7 @@ public class TrainingPlanController {
     }
 
     @PutMapping("/edit/{id}")
-    public ResponseEntity<?> editPlan(@PathVariable Long id, @RequestBody TrainingPlan plan, Authentication auth) {
+    public ResponseEntity<?> editPlan(@PathVariable("id") Long id, @RequestBody TrainingPlan plan, Authentication auth) {
         User current = (User) auth.getPrincipal();
         if (!canEdit(current)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only TRAINER or OWNER can edit plans");
@@ -51,18 +51,30 @@ public class TrainingPlanController {
             return ResponseEntity.notFound().build();
         }
         TrainingPlan toUpdate = existing.get();
-        toUpdate.setName(plan.getName());
-        toUpdate.setDescription(plan.getDescription());
+        // Solo actualiza los campos enviados en el body
+        if (plan.getName() != null) {
+            toUpdate.setName(plan.getName());
+        }
+        if (plan.getDescription() != null) {
+            toUpdate.setDescription(plan.getDescription());
+        }
+        // Si se quiere cambiar el usuario asignado al plan
+        if (plan.getUser() != null && plan.getUser().getId() != null) {
+            Optional<User> newUser = userRepository.findById(plan.getUser().getId());
+            if (newUser.isPresent()) {
+                toUpdate.setUser(newUser.get());
+            }
+        }
         return ResponseEntity.ok(planRepository.save(toUpdate));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TrainingPlan>> getPlansForUser(@PathVariable Long userId) {
+    public ResponseEntity<List<TrainingPlan>> getPlansForUser(@PathVariable("userId") Long userId) {
         return ResponseEntity.ok(planRepository.findByUserId(userId));
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deletePlan(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<?> deletePlan(@PathVariable("id") Long id, Authentication auth) {
         User current = (User) auth.getPrincipal();
         if (!canEdit(current)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only TRAINER or OWNER can delete plans");

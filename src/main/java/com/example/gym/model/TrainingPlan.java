@@ -16,7 +16,7 @@ public class TrainingPlan {
     private String description;
 
     // Relación con el usuario miembro
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
