@@ -111,6 +111,84 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "Crear Plan de Entrenamiento",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Plan fuerza\",\n  \"description\": \"Rutina semanal\",\n  \"user\": {\n    \"id\": 2\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/plans/create",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "plans", "create"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Editar Plan de Entrenamiento",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Plan fuerza avanzado\",\n  \"description\": \"Rutina avanzada\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/plans/edit/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "plans", "edit", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar Planes de un Usuario",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/plans/user/2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "plans", "user", "2"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar Plan de Entrenamiento",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/plans/delete/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "plans", "delete", "1"]
+        }
+      },
+      "response": []
     }
   ]
 }
