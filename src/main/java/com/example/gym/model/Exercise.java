@@ -1,11 +1,10 @@
 package com.example.gym.model;
 
 import jakarta.persistence.*;
-import java.util.List;
 
 @Entity
-@Table(name = "planes")
-public class TrainingPlan {
+@Table(name = "ejercicios")
+public class Exercise {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -16,15 +15,15 @@ public class TrainingPlan {
     @Column(length = 2000)
     private String description;
 
-    // Relación con el usuario miembro
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
 
-    // Relación con ejercicios
-    @OneToMany(mappedBy = "trainingPlan", cascade = CascadeType.ALL, orphanRemoval = true)
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    private List<Exercise> exercises;
+    // Relación con el plan de entrenamiento
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "plan_id", nullable = false)
+    private TrainingPlan trainingPlan;
+
+    // URL o path del video asociado
+    @Column(length = 500)
+    private String videoUrl;
 
     // Getters y setters
     public Long getId() { return id; }
@@ -33,8 +32,8 @@ public class TrainingPlan {
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-    public List<Exercise> getExercises() { return exercises; }
-    public void setExercises(List<Exercise> exercises) { this.exercises = exercises; }
+    public TrainingPlan getTrainingPlan() { return trainingPlan; }
+    public void setTrainingPlan(TrainingPlan trainingPlan) { this.trainingPlan = trainingPlan; }
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 }

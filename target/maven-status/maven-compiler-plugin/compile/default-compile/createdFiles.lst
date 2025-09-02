@@ -1,6 +1,9 @@
 com\example\gym\model\Attendance.class
+com\example\gym\controller\ExerciseController.class
 com\example\gym\controller\UserController.class
 com\example\gym\model\Subscription.class
+com\example\gym\controller\TrainingPlanController.class
+com\example\gym\model\TrainingPlan.class
 com\example\gym\model\Subscription$Status.class
 com\example\gym\GymApplication.class
 com\example\gym\model\User$UserRole.class
@@ -12,6 +15,8 @@ com\example\gym\config\SecurityConfig.class
 com\example\gym\repository\AttendanceRepository.class
 com\example\gym\service\RoleService.class
 com\example\gym\model\Role$RoleName.class
+com\example\gym\repository\ExerciseRepository.class
+com\example\gym\repository\TrainingPlanRepository.class
 com\example\gym\repository\MembershipPlanRepository.class
 com\example\gym\model\Role$RoleBuilder.class
 com\example\gym\model\Attendance$AttendanceBuilder.class
@@ -20,6 +25,7 @@ com\example\gym\repository\RoleRepository.class
 com\example\gym\repository\UserRepository.class
 com\example\gym\model\MembershipPlan.class
 com\example\gym\security\JwtUtil.class
+com\example\gym\model\Exercise.class
 com\example\gym\model\Subscription$SubscriptionBuilder.class
 com\example\gym\model\User$UserStatus.class
 com\example\gym\model\User$UserBuilder.class

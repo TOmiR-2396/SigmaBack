@@ -6,6 +6,74 @@
   },
   "item": [
     {
+      "name": "Subir Video de Ejercicio",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": "" }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/upload-video/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "upload-video", "1"]
+        },
+        "description": "Sube un video y lo asocia al ejercicio con id=1. Solo TRAINER/OWNER pueden subir videos."
+      },
+      "response": []
+    },
+    {
+      "name": "Obtener Info de Video de Ejercicio",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/video/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "video", "1"]
+        },
+        "description": "Devuelve un JSON con la info del ejercicio y la URL del video (puede ser null si no hay video)."
+      },
+      "response": []
+    },
+    {
+      "name": "Crear Ejercicio",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Sentadilla\",\n  \"description\": \"Ejercicio de piernas\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/create?planId=1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "create"],
+          "query": [
+            { "key": "planId", "value": "1" }
+          ]
+        },
+        "description": "Crea un ejercicio y lo asocia a un plan de entrenamiento existente. Solo TRAINER/OWNER pueden crear."
+      },
+      "response": []
+    },
+    {
       "name": "INSTRUCCIONES (JWT)",
       "event": [],
       "request": {
