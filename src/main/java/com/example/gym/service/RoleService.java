@@ -18,7 +18,9 @@ public class RoleService {
 
     // Asigna MEMBER por defecto a un usuario nuevo
     public void assignDefaultRole(User user) {
-    user.setRole(User.UserRole.MEMBER);
+        if (user.getRole() == null) {
+            user.setRole(User.UserRole.MEMBER);
+        }
         userRepository.save(user);
     }
 

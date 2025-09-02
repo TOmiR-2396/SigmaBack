@@ -23,13 +23,13 @@ public class ExerciseController {
             return ResponseEntity.notFound().build();
         }
         Exercise exercise = exerciseOpt.get();
-        // Construir respuesta JSON con info relevante
-        java.util.Map<String, Object> resp = new java.util.HashMap<>();
-        resp.put("id", exercise.getId());
-        resp.put("name", exercise.getName());
-        resp.put("description", exercise.getDescription());
-        resp.put("videoUrl", exercise.getVideoUrl()); // puede ser null
-        return ResponseEntity.ok(resp);
+        com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
+        dto.id = exercise.getId();
+        dto.name = exercise.getName();
+        dto.description = exercise.getDescription();
+        dto.videoUrl = exercise.getVideoUrl();
+        dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+        return ResponseEntity.ok(dto);
     }
     // Endpoint para subir video y asociarlo a un ejercicio
     @PostMapping("/upload-video/{id}")
@@ -46,18 +46,22 @@ public class ExerciseController {
         }
         Exercise exercise = exerciseOpt.get();
         try {
-            // Guardar el archivo en la carpeta 'videos' dentro del directorio del proyecto
             String uploadDir = System.getProperty("user.dir") + java.io.File.separator + "videos";
             java.io.File dir = new java.io.File(uploadDir);
             if (!dir.exists()) dir.mkdirs();
             String filename = "exercise_" + id + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
             java.io.File dest = new java.io.File(dir, filename);
             file.transferTo(dest);
-            // Guardar la ruta relativa para servir el video
             String relativePath = "videos/" + filename;
             exercise.setVideoUrl(relativePath);
             exerciseRepository.save(exercise);
-            return ResponseEntity.ok("Video uploaded and linked to exercise");
+            com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
+            dto.id = exercise.getId();
+            dto.name = exercise.getName();
+            dto.description = exercise.getDescription();
+            dto.videoUrl = exercise.getVideoUrl();
+            dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading video: " + e.getMessage());
         }
@@ -73,7 +77,7 @@ public class ExerciseController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<?> createExercise(@RequestBody Exercise exercise, @RequestParam Long planId, Authentication auth) {
+    public ResponseEntity<?> createExercise(@RequestBody com.example.gym.dto.ExerciseDTO exerciseDto, @RequestParam Long planId, Authentication auth) {
         User current = (User) auth.getPrincipal();
         if (!canEdit(current)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only TRAINER or OWNER can create exercises");
@@ -82,7 +86,18 @@ public class ExerciseController {
         if (plan.isEmpty()) {
             return ResponseEntity.badRequest().body("Training plan not found");
         }
+        Exercise exercise = new Exercise();
+        exercise.setName(exerciseDto.name);
+        exercise.setDescription(exerciseDto.description);
         exercise.setTrainingPlan(plan.get());
-        return ResponseEntity.ok(exerciseRepository.save(exercise));
+        exercise.setVideoUrl(exerciseDto.videoUrl);
+        Exercise saved = exerciseRepository.save(exercise);
+        com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
+        dto.id = saved.getId();
+        dto.name = saved.getName();
+        dto.description = saved.getDescription();
+        dto.videoUrl = saved.getVideoUrl();
+        dto.trainingPlanId = saved.getTrainingPlan() != null ? saved.getTrainingPlan().getId() : null;
+        return ResponseEntity.ok(dto);
     }
 }

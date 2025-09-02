@@ -6,6 +6,90 @@
   },
   "item": [
     {
+      "name": "Crear Membresía",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Funcional Kids\",\n  \"durationMonths\": 2,\n  \"price\": 1000\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/membership-plans",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["membership-plans"]
+        },
+        "description": "Crea una membresía. Solo OWNER puede crear. Para Funcional Kids, durationMonths debe ser 2."
+      },
+      "response": []
+    },
+    {
+      "name": "Listar Membresías",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/membership-plans",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["membership-plans"]
+        },
+        "description": "Lista todas las membresías."
+      },
+      "response": []
+    },
+    {
+      "name": "Obtener Membresía por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/membership-plans/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["membership-plans", "1"]
+        },
+        "description": "Obtiene una membresía por su ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Asignar Membresía a Usuario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "userId", "value": "2" },
+            { "key": "planId", "value": "1" }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8080/membership-plans/assign",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["membership-plans", "assign"]
+        },
+        "description": "Asigna una membresía a un usuario por su ID. Solo OWNER puede asignar."
+      },
+      "response": []
+    },
+    {
       "name": "Subir Video de Ejercicio",
       "request": {
         "method": "POST",

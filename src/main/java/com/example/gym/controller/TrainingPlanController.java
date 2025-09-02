@@ -26,22 +26,31 @@ public class TrainingPlanController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<?> createPlan(@RequestBody TrainingPlan plan, Authentication auth) {
+    public ResponseEntity<?> createPlan(@RequestBody com.example.gym.dto.TrainingPlanDTO planDto, Authentication auth) {
         User current = (User) auth.getPrincipal();
         if (!canEdit(current)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only TRAINER or OWNER can create plans");
         }
-        // El usuario miembro debe existir
-        Optional<User> member = userRepository.findById(plan.getUser().getId());
+        Optional<User> member = userRepository.findById(planDto.userId);
         if (member.isEmpty()) {
             return ResponseEntity.badRequest().body("Target user not found");
         }
+        TrainingPlan plan = new TrainingPlan();
+        plan.setName(planDto.name);
+        plan.setDescription(planDto.description);
         plan.setUser(member.get());
-        return ResponseEntity.ok(planRepository.save(plan));
+        TrainingPlan saved = planRepository.save(plan);
+        com.example.gym.dto.TrainingPlanDTO dto = new com.example.gym.dto.TrainingPlanDTO();
+        dto.id = saved.getId();
+        dto.name = saved.getName();
+        dto.description = saved.getDescription();
+        dto.userId = saved.getUser() != null ? saved.getUser().getId() : null;
+        // Exercises omitted for brevity
+        return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/edit/{id}")
-    public ResponseEntity<?> editPlan(@PathVariable("id") Long id, @RequestBody TrainingPlan plan, Authentication auth) {
+    public ResponseEntity<?> editPlan(@PathVariable("id") Long id, @RequestBody com.example.gym.dto.TrainingPlanDTO planDto, Authentication auth) {
         User current = (User) auth.getPrincipal();
         if (!canEdit(current)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only TRAINER or OWNER can edit plans");
@@ -51,26 +60,42 @@ public class TrainingPlanController {
             return ResponseEntity.notFound().build();
         }
         TrainingPlan toUpdate = existing.get();
-        // Solo actualiza los campos enviados en el body
-        if (plan.getName() != null) {
-            toUpdate.setName(plan.getName());
+        if (planDto.name != null) {
+            toUpdate.setName(planDto.name);
         }
-        if (plan.getDescription() != null) {
-            toUpdate.setDescription(plan.getDescription());
+        if (planDto.description != null) {
+            toUpdate.setDescription(planDto.description);
         }
-        // Si se quiere cambiar el usuario asignado al plan
-        if (plan.getUser() != null && plan.getUser().getId() != null) {
-            Optional<User> newUser = userRepository.findById(plan.getUser().getId());
+        if (planDto.userId != null) {
+            Optional<User> newUser = userRepository.findById(planDto.userId);
             if (newUser.isPresent()) {
                 toUpdate.setUser(newUser.get());
             }
         }
-        return ResponseEntity.ok(planRepository.save(toUpdate));
+        TrainingPlan saved = planRepository.save(toUpdate);
+        com.example.gym.dto.TrainingPlanDTO dto = new com.example.gym.dto.TrainingPlanDTO();
+        dto.id = saved.getId();
+        dto.name = saved.getName();
+        dto.description = saved.getDescription();
+        dto.userId = saved.getUser() != null ? saved.getUser().getId() : null;
+        // Exercises omitted for brevity
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TrainingPlan>> getPlansForUser(@PathVariable("userId") Long userId) {
-        return ResponseEntity.ok(planRepository.findByUserId(userId));
+    public ResponseEntity<java.util.List<com.example.gym.dto.TrainingPlanDTO>> getPlansForUser(@PathVariable("userId") Long userId) {
+        List<TrainingPlan> plans = planRepository.findByUserId(userId);
+        java.util.List<com.example.gym.dto.TrainingPlanDTO> dtos = new java.util.ArrayList<>();
+        for (TrainingPlan plan : plans) {
+            com.example.gym.dto.TrainingPlanDTO dto = new com.example.gym.dto.TrainingPlanDTO();
+            dto.id = plan.getId();
+            dto.name = plan.getName();
+            dto.description = plan.getDescription();
+            dto.userId = plan.getUser() != null ? plan.getUser().getId() : null;
+            // Exercises omitted for brevity
+            dtos.add(dto);
+        }
+        return ResponseEntity.ok(dtos);
     }
 
     @DeleteMapping("/delete/{id}")
