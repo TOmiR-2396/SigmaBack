@@ -11,6 +11,7 @@ import com.example.gym.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -78,5 +79,19 @@ public class UserController {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         roleService.assignTrainer(user);
         return ResponseEntity.ok("Role changed to TRAINER by OWNER: " + owner.getEmail());
+    }
+    @PostMapping("/assign-member")
+    public ResponseEntity<?> assignMember(@RequestBody Map<String, Long> ids) {
+    Long userId = ids.get("userId");
+    User user = userRepository.findById(userId).orElseThrow();
+    user.setRole(User.UserRole.MEMBER);
+    userRepository.save(user);
+    return ResponseEntity.ok("Role changed to MEMBER");
+}
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        // Solo OWNER puede ver todos los usuarios
+        List<User> users = userRepository.findAll();
+        return ResponseEntity.ok(users);
     }
 }

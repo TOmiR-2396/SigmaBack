@@ -11,13 +11,14 @@ Estructura mínima para que **la base de datos funcione** con JPA/Hibernate y My
 ```bash
 
 INICIAR DATABASE CON --> docker compose up -d
-INGRESAR A DATABASE CON --> mysql -h 127.0.0.1 -P 3306 -u gymuser -p
+INGRESAR A DATABASE CON --> mysql -h 127.0.0.1 -P 3307 -u gymuser -p
 
 export DB_HOST=localhost
-export DB_PORT=3306
+export DB_PORT=3307
 export DB_NAME=gymdb
 export DB_USER=gymuser
 export DB_PASSWORD=gympass
+MYSQL_ROOT_PASSWORD: rootpass
 
 INICIAR EL BACKEND CON --> mvn spring-boot:run
 ```
@@ -34,5 +35,9 @@ La app se inicia en `http://localhost:8080`. Hibernate creará/actualizará el e
 - DTOs y validaciones
 - Seguridad (Spring Security / JWT)
 - Migraciones con Flyway o Liquibase si prefieres control de esquema
+
+Nota:
+- El contenedor expone MySQL en el puerto 3307 del host (mapeado al 3306 interno).
+- La contraseña actual de `gymuser` es `gympass`. Si cambias la contraseña en docker-compose, recuerda que sólo aplica en la inicialización del volumen; si ya existe, deberás actualizarla manualmente o recrear el volumen.
 ```
 
