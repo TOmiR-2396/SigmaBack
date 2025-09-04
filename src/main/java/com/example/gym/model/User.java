@@ -1,3 +1,4 @@
+    // ...existing code...
 package com.example.gym.model;
 
 import jakarta.persistence.*;
@@ -74,5 +75,14 @@ public class User {
     }
     public void setRole(UserRole role) {
         this.role = role;
+    }
+    public String getFirstName() {
+        return firstName;
+    }
+    public String getLastName() {
+        return lastName;
+    }
+    public UserStatus getStatus() {
+        return status;
     }
 }

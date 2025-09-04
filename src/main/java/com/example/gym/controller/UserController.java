@@ -89,9 +89,19 @@ public class UserController {
     return ResponseEntity.ok("Role changed to MEMBER");
 }
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        // Solo OWNER puede ver todos los usuarios
+    public ResponseEntity<?> getAllUsers() {
         List<User> users = userRepository.findAll();
-        return ResponseEntity.ok(users);
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (User u : users) {
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", u.getId());
+            userMap.put("email", u.getEmail());
+            userMap.put("role", u.getRole());
+            userMap.put("firstName", u.getFirstName());
+            userMap.put("lastName", u.getLastName());
+            userMap.put("status", u.getStatus());
+            result.add(userMap);
+        }
+        return ResponseEntity.ok(result);
     }
 }

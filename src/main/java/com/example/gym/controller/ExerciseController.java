@@ -62,7 +62,7 @@ public class ExerciseController {
             dto.videoUrl = exercise.getVideoUrl();
             dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
             return ResponseEntity.ok(dto);
-        } catch (Exception e) {
+        } catch (java.io.IOException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading video: " + e.getMessage());
         }
     }
