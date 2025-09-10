@@ -16,9 +16,12 @@ public class TrainingPlan {
     @Column(length = 2000)
     private String description;
 
-    // Relación con el usuario miembro
+    @Column(nullable = false)
+    private Boolean isTemplate = false;
+
+    // Relación con el usuario miembro (nullable si es template)
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     // Relación con ejercicios
@@ -35,6 +38,8 @@ public class TrainingPlan {
     public void setDescription(String description) { this.description = description; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+    public Boolean getIsTemplate() { return isTemplate; }
+    public void setIsTemplate(Boolean isTemplate) { this.isTemplate = isTemplate; }
     public List<Exercise> getExercises() { return exercises; }
     public void setExercises(List<Exercise> exercises) { this.exercises = exercises; }
 }

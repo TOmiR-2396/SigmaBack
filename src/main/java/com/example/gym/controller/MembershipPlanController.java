@@ -39,6 +39,7 @@ public class MembershipPlanController {
         dto.planName = plan.getName();
         dto.durationMonths = plan.getDurationMonths();
         dto.price = plan.getPrice();
+    dto.daysPerWeek = plan.getDaysPerWeek();
         dto.startDate = subscription.getStartDate();
         dto.endDate = endDate;
         dto.status = subscription.getStatus().name();
@@ -66,6 +67,10 @@ public class MembershipPlanController {
         plan.setName(planDto.name);
         plan.setDurationMonths(planDto.durationMonths);
         plan.setPrice(planDto.price);
+        plan.setDaysPerWeek(planDto.daysPerWeek);
+        if (plan.getDaysPerWeek() == null || plan.getDaysPerWeek() < 1 || plan.getDaysPerWeek() > 5) {
+            return ResponseEntity.badRequest().body("daysPerWeek debe estar entre 1 y 5");
+        }
         if (plan.getName().equalsIgnoreCase("Funcional Kids") && plan.getDurationMonths() != 2) {
             return ResponseEntity.badRequest().body("Funcional Kids solo puede ser de 2 días a la semana");
         }
@@ -75,6 +80,7 @@ public class MembershipPlanController {
         dto.name = plan.getName();
         dto.durationMonths = plan.getDurationMonths();
         dto.price = plan.getPrice();
+        dto.daysPerWeek = plan.getDaysPerWeek();
         return ResponseEntity.ok(dto);
     }
 
@@ -89,6 +95,7 @@ public class MembershipPlanController {
             dto.name = plan.getName();
             dto.durationMonths = plan.getDurationMonths();
             dto.price = plan.getPrice();
+            dto.daysPerWeek = plan.getDaysPerWeek();
             dtos.add(dto);
         }
         return dtos;
@@ -107,6 +114,7 @@ public class MembershipPlanController {
         dto.name = plan.getName();
         dto.durationMonths = plan.getDurationMonths();
         dto.price = plan.getPrice();
+    dto.daysPerWeek = plan.getDaysPerWeek();
         return ResponseEntity.ok(dto);
     }
 

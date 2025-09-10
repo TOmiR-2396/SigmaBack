@@ -3,6 +3,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/TrainingPlanDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/TrainingPlanRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Subscription.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/WebConfig.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/MembershipPlanController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/security/JwtUtil.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/MembershipPlanRepository.java
@@ -20,6 +21,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Attendance.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/security/JwtAuthenticationFilter.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/GymApplication.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AssignTemplateRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/User.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/SubscriptionRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/AttendanceRepository.java

@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import com.example.gym.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
@@ -14,7 +16,7 @@ import java.util.Map;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth","/api"})
 public class UserController {
 
     private final UserRepository userRepository;
@@ -65,35 +67,42 @@ public class UserController {
     }
 
     // ================= Asignar TRAINER =================
+    @PreAuthorize("hasRole('OWNER')")
     @PostMapping("/assign-trainer")
-    public ResponseEntity<?> assignTrainer(@RequestBody Map<String, Long> ids) {
+    public ResponseEntity<?> assignTrainer(@RequestBody Map<String, Long> ids, Authentication authentication) {
         Long userId = ids.get("userId");
-        // Busca el único usuario OWNER en la base
-        User owner = userRepository.findAll().stream()
-            .filter(u -> u.getRole() == User.UserRole.OWNER)
-            .findFirst()
-            .orElse(null);
-        if (owner == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No OWNER user found in the system");
-        }
+        User owner = (User) authentication.getPrincipal();
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         roleService.assignTrainer(user);
         return ResponseEntity.ok("Role changed to TRAINER by OWNER: " + owner.getEmail());
     }
+    @PreAuthorize("hasRole('OWNER')")
     @PostMapping("/assign-member")
-    public ResponseEntity<?> assignMember(@RequestBody Map<String, Long> ids) {
-    Long userId = ids.get("userId");
-    User user = userRepository.findById(userId).orElseThrow();
-    user.setRole(User.UserRole.MEMBER);
-    userRepository.save(user);
-    return ResponseEntity.ok("Role changed to MEMBER");
-}
-    @GetMapping
-    public ResponseEntity<?> getAllUsers() {
-        List<User> users = userRepository.findAll();
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
+    public ResponseEntity<?> assignMember(@RequestBody Map<String, Long> ids, Authentication authentication) {
+        Long userId = ids.get("userId");
+        User owner = (User) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(User.UserRole.MEMBER);
+        userRepository.save(user);
+        return ResponseEntity.ok("Role changed to MEMBER by OWNER: " + owner.getEmail());
+    }
+    @PreAuthorize("hasAnyRole('OWNER','TRAINER')")
+    @GetMapping("/users")
+    public ResponseEntity<?> listUsers() {
+        return ResponseEntity.ok(mapUsers(userRepository.findAll()));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','TRAINER')")
+    @GetMapping("/users/search")
+    public ResponseEntity<?> searchUsers(@RequestParam(name = "q", required = false) String q) {
+        List<User> users = userRepository.searchUsers(q == null || q.isBlank() ? null : q.trim());
+        return ResponseEntity.ok(mapUsers(users));
+    }
+
+    private List<Map<String,Object>> mapUsers(List<User> users) {
+        List<Map<String,Object>> result = new java.util.ArrayList<>();
         for (User u : users) {
-            Map<String, Object> userMap = new HashMap<>();
+            Map<String,Object> userMap = new HashMap<>();
             userMap.put("id", u.getId());
             userMap.put("email", u.getEmail());
             userMap.put("role", u.getRole());
@@ -102,6 +111,6 @@ public class UserController {
             userMap.put("status", u.getStatus());
             result.add(userMap);
         }
-        return ResponseEntity.ok(result);
+        return result;
     }
 }

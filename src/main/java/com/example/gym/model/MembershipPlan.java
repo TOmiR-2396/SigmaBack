@@ -48,6 +48,12 @@ public class MembershipPlan {
     @Column(nullable = false)
     private Double price;
 
+        @NotNull
+        @Min(1)
+        @Max(5)
+        @Column(nullable = false)
+        private Integer daysPerWeek;
+
     public Double getPrice() {
         return price;
     }
@@ -62,5 +68,13 @@ public class MembershipPlan {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Integer getDaysPerWeek() {
+        return daysPerWeek;
+    }
+
+    public void setDaysPerWeek(Integer daysPerWeek) {
+        this.daysPerWeek = daysPerWeek;
     }
 }

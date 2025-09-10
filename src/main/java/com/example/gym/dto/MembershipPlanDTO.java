@@ -5,4 +5,5 @@ public class MembershipPlanDTO {
     public String name;
     public Integer durationMonths;
     public Double price;
+    public Integer daysPerWeek;
 }

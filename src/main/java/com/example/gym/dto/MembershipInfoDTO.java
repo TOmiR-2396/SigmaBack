@@ -7,6 +7,7 @@ public class MembershipInfoDTO {
     public String planName;
     public Integer durationMonths;
     public Double price;
+    public Integer daysPerWeek;
     public LocalDate startDate;
     public LocalDate endDate;
     public String status;

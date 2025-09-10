@@ -28,8 +28,9 @@ spring:
 #      password: admin
 #      roles: OWNER
 
+# cambie el puerto a 8081 para evitar conflictos con otros servicios como docker que corren en 8080 y si lo mato al puerto se me cae todo
 server:
-  port: ${PORT:8080}
+  port: ${PORT:8081}
 
 logging:
   level:
