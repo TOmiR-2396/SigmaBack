@@ -35,15 +35,15 @@ public class MembershipPlanController {
         java.time.LocalDate endDate = subscription.getEndDate();
         long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, endDate);
         com.example.gym.dto.MembershipInfoDTO dto = new com.example.gym.dto.MembershipInfoDTO();
-        dto.planId = plan.getId();
-        dto.planName = plan.getName();
-        dto.durationMonths = plan.getDurationMonths();
-        dto.price = plan.getPrice();
-    dto.daysPerWeek = plan.getDaysPerWeek();
-        dto.startDate = subscription.getStartDate();
-        dto.endDate = endDate;
-        dto.status = subscription.getStatus().name();
-        dto.daysLeft = daysLeft > 0 ? daysLeft : 0;
+        dto.setPlanId(plan.getId());
+        dto.setPlanName(plan.getName());
+        dto.setDurationMonths(plan.getDurationMonths());
+        dto.setPrice(plan.getPrice());
+        dto.setDaysPerWeek(plan.getDaysPerWeek());
+        dto.setStartDate(subscription.getStartDate());
+        dto.setEndDate(endDate);
+        dto.setStatus(subscription.getStatus().name());
+        dto.setDaysLeft(daysLeft > 0 ? daysLeft : 0);
         return ResponseEntity.ok(dto);
     }
 
@@ -159,5 +159,100 @@ public class MembershipPlanController {
         subscription.setStatus(Subscription.Status.ACTIVE);
         subscriptionRepository.save(subscription);
         return ResponseEntity.ok("Membresía asignada correctamente");
+    }
+
+    // Editar membresía (solo OWNER)
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePlan(@PathVariable("id") Long id, 
+                                        @RequestBody com.example.gym.dto.MembershipPlanDTO planDto, 
+                                        Authentication auth) {
+        // Validar que el usuario autenticado sea OWNER
+        Optional<User> ownerOpt = userRepository.findAll().stream()
+            .filter(u -> u.getRole() == User.UserRole.OWNER)
+            .findFirst();
+        if (ownerOpt.isEmpty()) {
+            return ResponseEntity.status(403).body("Solo OWNER puede editar membresías");
+        }
+
+        // Buscar el plan existente
+        Optional<MembershipPlan> planOpt = membershipPlanRepository.findById(id);
+        if (planOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MembershipPlan plan = planOpt.get();
+        
+        // Validar datos de entrada
+        if (planDto.daysPerWeek == null || planDto.daysPerWeek < 1 || planDto.daysPerWeek > 5) {
+            return ResponseEntity.badRequest().body("daysPerWeek debe estar entre 1 y 5");
+        }
+        
+        if (planDto.name != null && planDto.name.equalsIgnoreCase("Funcional Kids") && 
+            planDto.durationMonths != null && planDto.durationMonths != 2) {
+            return ResponseEntity.badRequest().body("Funcional Kids solo puede ser de 2 días a la semana");
+        }
+
+        // Actualizar campos
+        if (planDto.name != null && !planDto.name.trim().isEmpty()) {
+            plan.setName(planDto.name);
+        }
+        if (planDto.durationMonths != null && planDto.durationMonths > 0) {
+            plan.setDurationMonths(planDto.durationMonths);
+        }
+        if (planDto.price != null && planDto.price.doubleValue() > 0) {
+            plan.setPrice(planDto.price);
+        }
+        if (planDto.daysPerWeek != null) {
+            plan.setDaysPerWeek(planDto.daysPerWeek);
+        }
+
+        // Guardar cambios
+        membershipPlanRepository.save(plan);
+
+        // Crear DTO de respuesta
+        com.example.gym.dto.MembershipPlanDTO dto = new com.example.gym.dto.MembershipPlanDTO();
+        dto.id = plan.getId();
+        dto.name = plan.getName();
+        dto.durationMonths = plan.getDurationMonths();
+        dto.price = plan.getPrice();
+        dto.daysPerWeek = plan.getDaysPerWeek();
+        
+        return ResponseEntity.ok(dto);
+    }
+
+    // Eliminar membresía (solo OWNER)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletePlan(@PathVariable("id") Long id, Authentication auth) {
+        // Validar que el usuario autenticado sea OWNER
+        Optional<User> ownerOpt = userRepository.findAll().stream()
+            .filter(u -> u.getRole() == User.UserRole.OWNER)
+            .findFirst();
+        if (ownerOpt.isEmpty()) {
+            return ResponseEntity.status(403).body("Solo OWNER puede eliminar membresías");
+        }
+
+        // Buscar el plan
+        Optional<MembershipPlan> planOpt = membershipPlanRepository.findById(id);
+        if (planOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MembershipPlan plan = planOpt.get();
+
+        // Verificar si hay suscripciones activas asociadas a este plan
+        List<Subscription> activeSubscriptions = subscriptionRepository.findAll().stream()
+            .filter(s -> s.getPlan().getId().equals(id) && s.getStatus() == Subscription.Status.ACTIVE)
+            .collect(java.util.stream.Collectors.toList());
+
+        if (!activeSubscriptions.isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body("No se puede eliminar el plan. Hay " + activeSubscriptions.size() + 
+                      " suscripciones activas asociadas a este plan.");
+        }
+
+        // Eliminar el plan
+        membershipPlanRepository.delete(plan);
+        
+        return ResponseEntity.ok("Plan de membresía eliminado correctamente");
     }
 }

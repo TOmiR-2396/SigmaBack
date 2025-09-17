@@ -32,6 +32,9 @@ public class MembershipPlan {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(name = "external_id", unique = true)
+    private String externalId;
+
     @Positive
     @Column(nullable = false)
     private Integer durationMonths;
@@ -68,6 +71,14 @@ public class MembershipPlan {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getExternalId() {
+        return externalId;
+    }
+
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
     }
 
     public Integer getDaysPerWeek() {
