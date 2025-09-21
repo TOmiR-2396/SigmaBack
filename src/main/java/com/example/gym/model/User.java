@@ -12,6 +12,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class User {
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
     public Long getId() {
         return id;
     }

@@ -2,24 +2,121 @@ package com.example.gym.config;
 
 import com.example.gym.model.Role;
 import com.example.gym.model.Role.RoleName;
+import com.example.gym.model.User;
+import com.example.gym.model.Exercise;
+import com.example.gym.model.MembershipPlan;
+import com.example.gym.model.Subscription;
+import com.example.gym.model.TrainingPlan;
+import com.example.gym.model.Attendance;
 import com.example.gym.repository.RoleRepository;
+import com.example.gym.repository.UserRepository;
+import com.example.gym.repository.ExerciseRepository;
+import com.example.gym.repository.MembershipPlanRepository;
+import com.example.gym.repository.SubscriptionRepository;
+import com.example.gym.repository.TrainingPlanRepository;
+import com.example.gym.repository.AttendanceRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Component
 @RequiredArgsConstructor
 public class DataInitializer {
 
     private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final ExerciseRepository exerciseRepository;
+    private final MembershipPlanRepository membershipPlanRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final TrainingPlanRepository trainingPlanRepository;
+    private final AttendanceRepository attendanceRepository;
 
     @PostConstruct
-    public void initRoles() {
-        for (RoleName roleName : RoleName.values()) {
-            roleRepository.findByName(roleName)
-                .orElseGet(() -> roleRepository.save(
-                        Role.builder().name(roleName).build()
-                ));
-        }
+    public void initData() {
+    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    // Roles
+    for (RoleName roleName : RoleName.values()) {
+        roleRepository.findByName(roleName)
+        .orElseGet(() -> roleRepository.save(
+            Role.builder().name(roleName).build()
+        ));
+    }
+
+    // Usuarios
+    User owner = User.builder()
+        .firstName("Admin")
+        .lastName("Owner")
+        .email("admin@owner.com")
+        .password(encoder.encode("ownerpass"))
+        .role(User.UserRole.OWNER)
+        .status(User.UserStatus.ACTIVE)
+        .build();
+    owner = userRepository.save(owner);
+
+    User member1 = User.builder()
+        .firstName("Juan")
+        .lastName("Perez")
+        .email("juan@miembro.com")
+        .password(encoder.encode("memberpass"))
+        .role(User.UserRole.MEMBER)
+        .status(User.UserStatus.ACTIVE)
+        .build();
+    member1 = userRepository.save(member1);
+
+    User member2 = User.builder()
+        .firstName("Ana")
+        .lastName("Gomez")
+        .email("ana@miembro.com")
+        .password(encoder.encode("memberpass"))
+        .role(User.UserRole.MEMBER)
+        .status(User.UserStatus.ACTIVE)
+        .build();
+    member2 = userRepository.save(member2);
+
+    // Ejercicios
+    Exercise ex1 = Exercise.builder().name("Sentadillas").description("Ejercicio de piernas").build();
+    Exercise ex2 = Exercise.builder().name("Flexiones").description("Ejercicio de pecho").build();
+    Exercise ex3 = Exercise.builder().name("Abdominales").description("Ejercicio de core").build();
+    ex1 = exerciseRepository.save(ex1);
+    ex2 = exerciseRepository.save(ex2);
+    ex3 = exerciseRepository.save(ex3);
+
+    // Planes de membresía
+    MembershipPlan plan1 = MembershipPlan.builder().name("Mensual").durationMonths(1).price(1000.0).daysPerWeek(3).build();
+    MembershipPlan plan2 = MembershipPlan.builder().name("Trimestral").durationMonths(3).price(2700.0).daysPerWeek(4).build();
+    plan1 = membershipPlanRepository.save(plan1);
+    plan2 = membershipPlanRepository.save(plan2);
+
+    // Suscripciones
+    Subscription sub1 = Subscription.builder()
+        .user(member1)
+        .plan(plan1)
+        .startDate(java.time.LocalDate.now().minusDays(10))
+        .endDate(java.time.LocalDate.now().plusDays(20))
+        .status(Subscription.Status.ACTIVE)
+        .build();
+    subscriptionRepository.save(sub1);
+
+    Subscription sub2 = Subscription.builder()
+        .user(member2)
+        .plan(plan2)
+        .startDate(java.time.LocalDate.now().minusDays(5))
+        .endDate(java.time.LocalDate.now().plusDays(85))
+        .status(Subscription.Status.ACTIVE)
+        .build();
+    subscriptionRepository.save(sub2);
+
+    // Planes de entrenamiento
+    TrainingPlan tp1 = TrainingPlan.builder().name("Fuerza básica").description("Plan para principiantes").build();
+    TrainingPlan tp2 = TrainingPlan.builder().name("Cardio avanzado").description("Plan para mejorar resistencia").build();
+    tp1 = trainingPlanRepository.save(tp1);
+    tp2 = trainingPlanRepository.save(tp2);
+
+    // Asistencias
+    Attendance att1 = Attendance.builder().user(member1).date(java.time.LocalDate.now().minusDays(2)).build();
+    Attendance att2 = Attendance.builder().user(member2).date(java.time.LocalDate.now().minusDays(1)).build();
+    attendanceRepository.save(att1);
+    attendanceRepository.save(att2);
     }
 }

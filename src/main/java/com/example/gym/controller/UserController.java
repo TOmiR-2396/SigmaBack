@@ -99,7 +99,6 @@ public class UserController {
         userRepository.save(user);
         return ResponseEntity.ok("Role changed to MEMBER by OWNER: " + owner.getEmail());
     }
-    @PreAuthorize("hasAnyRole('OWNER','TRAINER')")
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
         return ResponseEntity.ok(mapUsers(userRepository.findAll()));

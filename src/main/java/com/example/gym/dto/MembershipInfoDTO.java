@@ -12,6 +12,37 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MembershipInfoDTO {
+    public void setPlanName(String planName) {
+        this.planName = planName;
+    }
+
+    public void setDurationMonths(Integer durationMonths) {
+        this.durationMonths = durationMonths;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public void setDaysPerWeek(Integer daysPerWeek) {
+        this.daysPerWeek = daysPerWeek;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setDaysLeft(long daysLeft) {
+        this.daysLeft = daysLeft;
+    }
     private boolean active;
     private String membershipPlan;
     private LocalDate startDate;
@@ -23,6 +54,13 @@ public class MembershipInfoDTO {
     
     // Campos adicionales para compatibilidad
     private Long planId;
+    public void setPlanId(Long planId) {
+        this.planId = planId;
+    }
+
+    public Long getPlanId() {
+        return this.planId;
+    }
     private String planName;
     private Integer durationMonths;
     private Double price;
