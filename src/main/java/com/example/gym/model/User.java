@@ -47,7 +47,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private UserStatus status = UserStatus.ACTIVE;
+    private UserStatus status = UserStatus.INACTIVE;
 
     @Column(nullable = false)
     private String password;
@@ -84,5 +84,9 @@ public class User {
     }
     public UserStatus getStatus() {
         return status;
+    }
+    
+    public void setStatus(UserStatus status) {
+        this.status = status;
     }
 }

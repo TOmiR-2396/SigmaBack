@@ -38,6 +38,7 @@ public class UserController {
             return ResponseEntity.badRequest().body("Email already exists");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setStatus(User.UserStatus.INACTIVE); // Usuario inicia desactivado
         User savedUser = userRepository.save(user);
         roleService.assignDefaultRole(savedUser);
         // No exponer la contraseña ni datos sensibles
@@ -45,7 +46,8 @@ public class UserController {
         response.put("id", savedUser.getId());
         response.put("email", savedUser.getEmail());
         response.put("role", savedUser.getRole());
-        //        response.put("status", savedUser.getStatus());
+        response.put("status", savedUser.getStatus());
+        response.put("message", "Usuario registrado. Esperando activación por parte del administrador.");
         return ResponseEntity.ok(response);
     }
 
@@ -66,15 +68,26 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // ================= Asignar TRAINER =================
+        // ================= Asignar TRAINER =================
     @PreAuthorize("hasRole('OWNER')")
     @PostMapping("/assign-trainer")
     public ResponseEntity<?> assignTrainer(@RequestBody Map<String, Long> ids, Authentication authentication) {
         Long userId = ids.get("userId");
         User owner = (User) authentication.getPrincipal();
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        roleService.assignTrainer(user);
-        return ResponseEntity.ok("Role changed to TRAINER by OWNER: " + owner.getEmail());
+        user.setRole(User.UserRole.TRAINER);
+        user.setStatus(User.UserStatus.ACTIVE); // Los TRAINER siempre están activos
+        userRepository.save(user);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Role changed to TRAINER by OWNER: " + owner.getEmail());
+        response.put("userId", user.getId());
+        response.put("userEmail", user.getEmail());
+        response.put("newRole", user.getRole());
+        response.put("status", user.getStatus());
+        response.put("note", "Los usuarios TRAINER se activan automáticamente");
+        
+        return ResponseEntity.ok(response);
     }
     @PreAuthorize("hasRole('OWNER')")
     @PostMapping("/assign-member")
@@ -86,6 +99,30 @@ public class UserController {
         userRepository.save(user);
         return ResponseEntity.ok("Role changed to MEMBER by OWNER: " + owner.getEmail());
     }
+
+    // ================= Activar/Desactivar Usuarios =================
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/activate-user")
+    public ResponseEntity<?> activateUser(@RequestBody Map<String, Long> ids, Authentication authentication) {
+        Long userId = ids.get("userId");
+        User owner = (User) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(User.UserStatus.ACTIVE);
+        userRepository.save(user);
+        return ResponseEntity.ok("Usuario activado por OWNER: " + owner.getEmail());
+    }
+
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/deactivate-user")
+    public ResponseEntity<?> deactivateUser(@RequestBody Map<String, Long> ids, Authentication authentication) {
+        Long userId = ids.get("userId");
+        User owner = (User) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(User.UserStatus.INACTIVE);
+        userRepository.save(user);
+        return ResponseEntity.ok("Usuario desactivado por OWNER: " + owner.getEmail());
+    }
+    
     @PreAuthorize("hasAnyRole('OWNER','TRAINER')")
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
