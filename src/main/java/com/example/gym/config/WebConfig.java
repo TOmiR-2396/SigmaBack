@@ -4,6 +4,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 
 @Configuration
 public class WebConfig {
@@ -19,5 +23,18 @@ public class WebConfig {
                     .allowCredentials(true);
             }
         };
+    }
+
+    @Bean
+    CorsConfigurationSource cors() {
+        var c = new CorsConfiguration();
+        c.setAllowedOrigins(List.of(
+            "http://sigmagym.com.ar", "https://sigmagym.com.ar",
+            "http://www.sigmagym.com.ar", "https://www.sigmagym.com.ar"));
+        c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        c.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        var s = new UrlBasedCorsConfigurationSource(); 
+        s.registerCorsConfiguration("/**", c); 
+        return s;
     }
 }
