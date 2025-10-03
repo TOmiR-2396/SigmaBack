@@ -1,24 +1,23 @@
 services:
-  # Backend Spring Boot
   backend:
     build: .
     container_name: gym-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"   # solo loopback (no público)
     environment:
-      # Configuración de base de datos para Docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gymdb
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gymdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: gymuser
       SPRING_DATASOURCE_PASSWORD: gympass
       SPRING_PROFILES_ACTIVE: docker
+      # Opcional: JAVA_OPTS para limitar memoria
+      JAVA_OPTS: "-Xms256m -Xmx512m"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - gym-network
 
-  # Base de datos MySQL
   mysql:
     image: mysql:8.0
     container_name: gym-mysql
@@ -28,15 +27,18 @@ services:
       MYSQL_DATABASE: gymdb
       MYSQL_USER: gymuser
       MYSQL_PASSWORD: gympass
-    ports:
-      - "3307:3306"
+    # 🔒 No expongas MySQL públicamente
+    # Si igual querés acceder desde el host: "127.0.0.1:3307:3306"
+    # ports:
+    #   - "127.0.0.1:3307:3306"
     volumes:
       - dbdata:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-prootpass"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - gym-network
 
