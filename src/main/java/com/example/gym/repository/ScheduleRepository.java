@@ -21,4 +21,27 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
     
     // Buscar horarios activos
     List<Schedule> findByIsActiveTrue();
+    
+    // Verificar si existe un horario exacto duplicado (mismo día, hora inicio y fin)
+    @Query("SELECT COUNT(s) FROM Schedule s WHERE s.dayOfWeek = :dayOfWeek " +
+           "AND s.startTime = :startTime AND s.endTime = :endTime AND s.isActive = true")
+    Long countExactDuplicate(@Param("dayOfWeek") Integer dayOfWeek, 
+                            @Param("startTime") java.time.LocalTime startTime, 
+                            @Param("endTime") java.time.LocalTime endTime);
+    
+    // Verificar horarios que se solapan en el mismo día
+    @Query("SELECT s FROM Schedule s WHERE s.dayOfWeek = :dayOfWeek AND s.isActive = true " +
+           "AND ((s.startTime < :endTime AND s.endTime > :startTime))")
+    List<Schedule> findOverlappingSchedules(@Param("dayOfWeek") Integer dayOfWeek,
+                                          @Param("startTime") java.time.LocalTime startTime,
+                                          @Param("endTime") java.time.LocalTime endTime);
+    
+    // Para actualización - excluir el horario actual de la verificación
+    @Query("SELECT s FROM Schedule s WHERE s.dayOfWeek = :dayOfWeek AND s.isActive = true " +
+           "AND s.id != :excludeId " +
+           "AND ((s.startTime < :endTime AND s.endTime > :startTime))")
+    List<Schedule> findOverlappingSchedulesExcludingCurrent(@Param("dayOfWeek") Integer dayOfWeek,
+                                                           @Param("startTime") java.time.LocalTime startTime,
+                                                           @Param("endTime") java.time.LocalTime endTime,
+                                                           @Param("excludeId") Long excludeId);
 }

@@ -54,6 +54,23 @@ public class TurnosController {
                 return ResponseEntity.badRequest().body("La hora de inicio debe ser anterior a la hora de fin");
             }
 
+            // Verificar duplicados exactos
+            Long exactDuplicates = scheduleRepository.countExactDuplicate(
+                scheduleDto.getDayOfWeek(), startTime, endTime);
+            if (exactDuplicates > 0) {
+                return ResponseEntity.badRequest().body("Ya existe un horario exacto para este día y horas");
+            }
+
+            // Verificar solapamientos de horarios
+            List<Schedule> overlapping = scheduleRepository.findOverlappingSchedules(
+                scheduleDto.getDayOfWeek(), startTime, endTime);
+            if (!overlapping.isEmpty()) {
+                Schedule conflict = overlapping.get(0);
+                return ResponseEntity.badRequest().body(
+                    "Este horario se solapa con otro existente: " + 
+                    conflict.getStartTime() + " - " + conflict.getEndTime());
+            }
+
             Schedule schedule = Schedule.builder()
                 .dayOfWeek(scheduleDto.getDayOfWeek())
                 .startTime(startTime)
@@ -120,6 +137,17 @@ public class TurnosController {
             // Validar horas
             if (existing.getStartTime().isAfter(existing.getEndTime())) {
                 return ResponseEntity.badRequest().body("La hora de inicio debe ser anterior a la hora de fin");
+            }
+
+            // Verificar solapamientos con otros horarios (excluyendo el actual)
+            List<Schedule> overlapping = scheduleRepository.findOverlappingSchedulesExcludingCurrent(
+                existing.getDayOfWeek(), existing.getStartTime(), existing.getEndTime(), scheduleId);
+            if (!overlapping.isEmpty()) {
+                Schedule conflict = overlapping.get(0);
+                return ResponseEntity.badRequest().body(
+                    "Este horario se solapa con otro existente: " + 
+                    conflict.getStartTime() + " - " + conflict.getEndTime() + 
+                    " (ID: " + conflict.getId() + ")");
             }
 
             Schedule saved = scheduleRepository.save(existing);

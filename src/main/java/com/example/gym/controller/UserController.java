@@ -122,7 +122,31 @@ public class UserController {
         userRepository.save(user);
         return ResponseEntity.ok("Usuario desactivado por OWNER: " + owner.getEmail());
     }
-    
+
+    // ================= Obtener mis datos =================
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyProfile(Authentication authentication) {
+        try {
+            User currentUser = (User) authentication.getPrincipal();
+            
+            Map<String, Object> userProfile = new HashMap<>();
+            userProfile.put("id", currentUser.getId());
+            userProfile.put("email", currentUser.getEmail());
+            userProfile.put("firstName", currentUser.getFirstName());
+            userProfile.put("lastName", currentUser.getLastName());
+            userProfile.put("phone", currentUser.getPhone());
+            userProfile.put("birthDate", currentUser.getBirthDate());
+            userProfile.put("joinDate", currentUser.getJoinDate());
+            userProfile.put("role", currentUser.getRole());
+            userProfile.put("status", currentUser.getStatus());
+            
+            return ResponseEntity.ok(userProfile);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al obtener datos del usuario: " + e.getMessage());
+        }
+    }
+
     @PreAuthorize("hasAnyRole('OWNER','TRAINER')")
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
