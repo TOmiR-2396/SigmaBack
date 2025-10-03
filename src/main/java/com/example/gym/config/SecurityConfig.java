@@ -31,14 +31,14 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                // Permití AMBAS rutas por si cambiás nginx más adelante
+                .requestMatchers("/auth/**", "/api/auth/**", "/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
-            .httpBasic(AbstractHttpConfigurer::disable)   // ⬅️ saca el header Basic
+            .httpBasic(AbstractHttpConfigurer::disable)      // saca el challenge Basic
             .formLogin(AbstractHttpConfigurer::disable)
-            .exceptionHandling(e -> e.authenticationEntryPoint((req,res,ex) -> {
-                res.setStatus(401);                         // 401 sin Basic challenge
-            }));
+            // Evita "Saved request ... to session"
+            .requestCache(rc -> rc.disable());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
