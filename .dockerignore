@@ -1,0 +1,25 @@
+# Archivos y directorios a ignorar en Docker build
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Directorios de desarrollo
+.vscode
+.idea
+
+# Archivos temporales
+*.tmp
+*.log
+
+# Dependencias locales (se compilarán en el contenedor)
+node_modules
+.mvn
+mvnw
+mvnw.cmd
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db

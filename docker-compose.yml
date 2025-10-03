@@ -1,6 +1,27 @@
 services:
+  # Backend Spring Boot
+  backend:
+    build: .
+    container_name: gym-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Configuración de base de datos para Docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gymdb
+      SPRING_DATASOURCE_USERNAME: gymuser
+      SPRING_DATASOURCE_PASSWORD: gympass
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - gym-network
+
+  # Base de datos MySQL
   mysql:
     image: mysql:8.0
+    container_name: gym-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
@@ -16,5 +37,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - gym-network
+
 volumes:
   dbdata:
+
+networks:
+  gym-network:
+    driver: bridge

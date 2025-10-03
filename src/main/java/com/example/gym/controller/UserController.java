@@ -3,6 +3,7 @@ package com.example.gym.controller;
 import com.example.gym.model.User;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.service.RoleService;
+import com.example.gym.service.PasswordResetService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping({"/api/auth","/api"})
@@ -24,6 +26,8 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     public UserController(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -66,6 +70,87 @@ public class UserController {
         response.put("email", user.getEmail());
         response.put("id", user.getId());
         return ResponseEntity.ok(response);
+    }
+
+    // ================= Recuperación de Contraseña =================
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email es requerido");
+            }
+            
+            // Verificar si el usuario existe
+            if (!userRepository.existsByEmail(email)) {
+                // Por seguridad, no revelar si el email existe o no
+                return ResponseEntity.ok("Si el email existe, se enviará un enlace de recuperación");
+            }
+            
+            String token = passwordResetService.createPasswordResetToken(email);
+            
+            // Aquí deberías enviar el email con el token
+            // Por ahora, lo devolvemos en la respuesta (solo para desarrollo/testing)
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Token de recuperación generado");
+            response.put("token", token); // EN PRODUCCIÓN: NO incluir esto, solo enviar por email
+            response.put("resetUrl", "http://localhost:3000/reset-password?token=" + token);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al procesar solicitud: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            String newPassword = request.get("newPassword");
+            
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Token es requerido");
+            }
+            
+            if (newPassword == null || newPassword.length() < 6) {
+                return ResponseEntity.badRequest().body("La contraseña debe tener al menos 6 caracteres");
+            }
+            
+            boolean success = passwordResetService.changePasswordWithToken(token, newPassword);
+            
+            if (success) {
+                return ResponseEntity.ok("Contraseña cambiada exitosamente");
+            } else {
+                return ResponseEntity.badRequest().body("Token inválido o expirado");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al cambiar contraseña: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<?> validateResetToken(@RequestParam String token) {
+        try {
+            boolean isValid = passwordResetService.validatePasswordResetToken(token);
+            
+            if (isValid) {
+                // Obtener información del usuario para mostrar en el formulario
+                Optional<User> userOpt = passwordResetService.getUserByToken(token);
+                if (userOpt.isPresent()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("valid", true);
+                    response.put("email", userOpt.get().getEmail());
+                    return ResponseEntity.ok(response);
+                }
+            }
+            
+            return ResponseEntity.ok(Map.of("valid", false));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al validar token: " + e.getMessage());
+        }
     }
 
         // ================= Asignar TRAINER =================

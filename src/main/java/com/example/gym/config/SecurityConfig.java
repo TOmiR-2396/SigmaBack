@@ -28,8 +28,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                // Solo login y register públicos
-                .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                // Endpoints públicos
+                .requestMatchers("/api/auth/register", "/api/auth/login", 
+                               "/api/auth/forgot-password", "/api/auth/reset-password", 
+                               "/api/auth/validate-reset-token").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
