@@ -29,7 +29,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         
         // Endpoints públicos que no requieren autenticación
-        if (path.equals("/api/auth/register") || path.equals("/api/auth/login")) {
+        if (path.equals("/api/auth/register") || 
+            path.equals("/api/auth/login") ||
+            path.equals("/api/auth/forgot-password") ||
+            path.equals("/api/auth/reset-password") ||
+            path.equals("/api/auth/validate-reset-token")) {
             filterChain.doFilter(request, response);
             return;
         }

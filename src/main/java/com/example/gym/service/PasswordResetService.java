@@ -53,45 +53,39 @@ public class PasswordResetService {
         return token;
     }
     
-    // Validar token de recuperación
+        // Validar token de reset
+    @Transactional
     public boolean validatePasswordResetToken(String token) {
-        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
-        if (tokenOpt.isEmpty()) {
-            return false;
-        }
-        
-        PasswordResetToken resetToken = tokenOpt.get();
-        return resetToken.isValid();
+        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenWithUser(token);
+        return tokenOpt.isPresent() && tokenOpt.get().isValid();
     }
     
-    // Cambiar contraseña usando token
+        // Resetear contraseña
     @Transactional
-    public boolean changePasswordWithToken(String token, String newPassword) {
-        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
-        if (tokenOpt.isEmpty()) {
+    public boolean resetPassword(String token, String newPassword) {
+        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenWithUser(token);
+        
+        if (tokenOpt.isEmpty() || !tokenOpt.get().isValid()) {
             return false;
         }
         
         PasswordResetToken resetToken = tokenOpt.get();
-        if (!resetToken.isValid()) {
-            return false;
-        }
-        
-        // Cambiar contraseña
         User user = resetToken.getUser();
+        
+        // Actualizar contraseña
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         
         // Marcar token como usado
-        resetToken.setUsed(true);
-        tokenRepository.save(resetToken);
+        tokenRepository.delete(resetToken);
         
         return true;
     }
     
     // Obtener usuario por token
+    @Transactional
     public Optional<User> getUserByToken(String token) {
-        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
+        Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenWithUser(token);
         if (tokenOpt.isEmpty() || !tokenOpt.get().isValid()) {
             return Optional.empty();
         }

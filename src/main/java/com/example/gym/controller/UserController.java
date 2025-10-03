@@ -4,6 +4,7 @@ import com.example.gym.model.User;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.service.RoleService;
 import com.example.gym.service.PasswordResetService;
+import com.example.gym.service.EmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,8 @@ public class UserController {
     private JwtUtil jwtUtil;
     @Autowired
     private PasswordResetService passwordResetService;
+    @Autowired
+    private EmailService emailService;
 
     public UserController(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -89,12 +92,13 @@ public class UserController {
             
             String token = passwordResetService.createPasswordResetToken(email);
             
-            // Aquí deberías enviar el email con el token
-            // Por ahora, lo devolvemos en la respuesta (solo para desarrollo/testing)
+            // Enviar email real con Resend
+            emailService.sendPasswordResetEmail(email, token);
+            
+            // Respuesta segura (sin exponer el token)
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Token de recuperación generado");
-            response.put("token", token); // EN PRODUCCIÓN: NO incluir esto, solo enviar por email
-            response.put("resetUrl", "http://localhost:3000/reset-password?token=" + token);
+            response.put("message", "Si el email existe, se ha enviado un enlace de recuperación");
+            response.put("status", "success");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -117,7 +121,7 @@ public class UserController {
                 return ResponseEntity.badRequest().body("La contraseña debe tener al menos 6 caracteres");
             }
             
-            boolean success = passwordResetService.changePasswordWithToken(token, newPassword);
+            boolean success = passwordResetService.resetPassword(token, newPassword);
             
             if (success) {
                 return ResponseEntity.ok("Contraseña cambiada exitosamente");
