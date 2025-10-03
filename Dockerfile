@@ -1,17 +1,16 @@
-# Usar imagen base de OpenJDK 17
-FROM openjdk:17-jdk-slim
+# ===== builder =====
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+COPY src ./src
+RUN mvn -q -DskipTests package
 
-# Establecer directorio de trabajo
+# ===== runtime =====
+FROM eclipse-temurin:17-jre
 WORKDIR /app
-
-# Copiar el archivo JAR generado por Maven
-COPY target/gym-0.0.1-SNAPSHOT.jar app.jar
-
-# Exponer el puerto 8080
+# copia el jar que se haya generado (cualquiera)
+COPY --from=builder /build/target/*.jar /app/app.jar
 EXPOSE 8080
-
-# Variables de entorno para la base de datos
-ENV SPRING_PROFILES_ACTIVE=docker
-
-# Comando para ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
