@@ -10,6 +10,8 @@ services:
       SPRING_DATASOURCE_USERNAME: gymuser
       SPRING_DATASOURCE_PASSWORD: gympass
       SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: "Z3xO1raNs7SJxocFht4wpds4AYoo7Q9QbRMaOST6H9dtq7vzKrh/+eoB6c036Du6Mr2tlv0w2joGUetlHu6Hxg=="
+      JWT_EXPIRATION: "86400000"   # 1 día en ms
       # Opcional: JAVA_OPTS para limitar memoria
       JAVA_OPTS: "-Xms256m -Xmx512m"
     depends_on:
