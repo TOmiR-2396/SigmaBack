@@ -32,7 +32,8 @@ public class WebConfig {
             "http://sigmagym.com.ar", "https://sigmagym.com.ar",
             "http://www.sigmagym.com.ar", "https://www.sigmagym.com.ar"));
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        c.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        c.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
+        c.setAllowCredentials(true);
         var s = new UrlBasedCorsConfigurationSource(); 
         s.registerCorsConfiguration("/**", c); 
         return s;
