@@ -1,10 +1,16 @@
 package com.example.gym.controller;
 
 import com.example.gym.dto.AssignTemplateRequest;
+import com.example.gym.dto.ExerciseDTO;
+import com.example.gym.dto.TrainingPlanDTO;
+import com.example.gym.model.Exercise;
 import com.example.gym.model.TrainingPlan;
 import com.example.gym.model.User;
+import com.example.gym.repository.ExerciseRepository;
 import com.example.gym.repository.TrainingPlanRepository;
 import com.example.gym.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +23,15 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/plans")
 public class TrainingPlanController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TrainingPlanController.class);
+    
     @Autowired
     private TrainingPlanRepository planRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ExerciseRepository exerciseRepository;
 
     // GET /api/plans/templates - Obtener todas las plantillas
     @GetMapping("/templates")
@@ -46,6 +57,66 @@ public class TrainingPlanController {
         template.setUser(null); // Templates no tienen usuario asignado
         TrainingPlan saved = planRepository.save(template);
         return ResponseEntity.ok(mapPlanToDTO(saved));
+    }
+
+    // PUT /api/plans/templates/update/{templateId} - Actualizar plantilla
+    @PutMapping("/templates/update/{templateId}")
+    @PreAuthorize("hasRole('TRAINER') or hasRole('OWNER')")
+    public ResponseEntity<?> updateTemplate(@PathVariable("templateId") Long templateId, 
+                                          @RequestBody TrainingPlanDTO planDto, 
+                                          Authentication auth) {
+        try {
+            // Buscar template
+            Optional<TrainingPlan> templateOpt = planRepository.findById(templateId);
+            if (templateOpt.isEmpty() || !Boolean.TRUE.equals(templateOpt.get().getIsTemplate())) {
+                return ResponseEntity.badRequest().body("Template no encontrado");
+            }
+            
+            TrainingPlan template = templateOpt.get();
+            
+            // Validar y actualizar campos básicos
+            if (planDto.name != null && !planDto.name.trim().isEmpty()) {
+                template.setName(planDto.name.trim());
+            }
+            if (planDto.description != null) {
+                template.setDescription(planDto.description.trim());
+            }
+            
+            // Asegurar que sigue siendo template
+            template.setIsTemplate(true);
+            template.setUser(null); // Templates no tienen usuario asignado
+            
+            // ACTUALIZAR EJERCICIOS - Esta es la parte que falta en tu código actual
+            if (planDto.exercises != null) {
+                // Eliminar ejercicios existentes del template
+                List<Exercise> existingExercises = exerciseRepository.findByTrainingPlanId(templateId);
+                exerciseRepository.deleteAll(existingExercises);
+                
+                // Crear nuevos ejercicios
+                for (ExerciseDTO exerciseDto : planDto.exercises) {
+                    if (exerciseDto.name != null && !exerciseDto.name.trim().isEmpty()) {
+                        Exercise exercise = new Exercise();
+                        exercise.setTrainingPlan(template);
+                        exercise.setName(exerciseDto.name.trim());
+                        exercise.setDescription(exerciseDto.description != null ? exerciseDto.description : "");
+                        exercise.setSets(exerciseDto.sets != null ? exerciseDto.sets : 0);
+                        exercise.setReps(exerciseDto.reps != null ? exerciseDto.reps : 0);
+                        exercise.setWeight(exerciseDto.weight != null ? exerciseDto.weight : 0.0);
+                        exercise.setVideoUrl(exerciseDto.videoUrl);
+                        
+                        exerciseRepository.save(exercise);
+                    }
+                }
+            }
+            
+            TrainingPlan saved = planRepository.save(template);
+            return ResponseEntity.ok(mapPlanToDTO(saved));
+            
+        } catch (Exception e) {
+            logger.error("Error actualizando template: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error interno del servidor");
+        }
     }
 
     // DELETE /api/plans/templates/delete/:templateId - Eliminar plantilla
