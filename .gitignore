@@ -1,1 +1,27 @@
 /target/
+
+# Data initializer para desarrollo local (no subir credenciales)
+src/main/java/com/example/gym/config/DataInitializer.java
+
+# Archivos de configuración con información sensible
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+*.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Base de datos local
+*.db
+*.sqlite
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
