@@ -25,6 +25,16 @@ public class Exercise {
     @Column(length = 500)
     private String videoUrl;
 
+    // Campos de ejercicio
+    @Column
+    private Integer sets;
+
+    @Column
+    private Integer reps;
+
+    @Column
+    private Double weight; // en kg
+
     // Getters y setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -36,4 +46,10 @@ public class Exercise {
     public void setTrainingPlan(TrainingPlan trainingPlan) { this.trainingPlan = trainingPlan; }
     public String getVideoUrl() { return videoUrl; }
     public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+    public Integer getSets() { return sets; }
+    public void setSets(Integer sets) { this.sets = sets; }
+    public Integer getReps() { return reps; }
+    public void setReps(Integer reps) { this.reps = reps; }
+    public Double getWeight() { return weight; }
+    public void setWeight(Double weight) { this.weight = weight; }
 }

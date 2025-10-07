@@ -3,6 +3,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ReservationRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/TrainingPlanDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/TrainingPlanRepository.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/MembershipExpirationController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Subscription.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/WebConfig.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Reservation.java
@@ -18,6 +19,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Schedule.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/ExerciseController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/RoleRepository.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/DataInitializer.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/MembershipPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/TrainingPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TrainingPlanController.java
@@ -32,6 +34,8 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/GymApplication.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AssignTemplateRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/User.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/MembershipExpirationService.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/EmailService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/SubscriptionRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/AttendanceRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/UserController.java

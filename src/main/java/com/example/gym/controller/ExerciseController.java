@@ -15,6 +15,66 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/exercises")
 public class ExerciseController {
+    
+    // Endpoint para obtener todos los ejercicios
+    @GetMapping
+    public ResponseEntity<?> getAllExercises(Authentication auth) {
+        try {
+            java.util.List<Exercise> exercises = exerciseRepository.findAll();
+            java.util.List<com.example.gym.dto.ExerciseDTO> exerciseDTOs = exercises.stream()
+                .map(exercise -> {
+                    com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
+                    dto.id = exercise.getId();
+                    dto.name = exercise.getName();
+                    dto.description = exercise.getDescription();
+                    dto.videoUrl = exercise.getVideoUrl();
+                    dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+                    dto.sets = exercise.getSets();
+                    dto.reps = exercise.getReps();
+                    dto.weight = exercise.getWeight();
+                    return dto;
+                })
+                .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(exerciseDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error retrieving exercises: " + e.getMessage());
+        }
+    }
+    
+    // Endpoint para obtener ejercicios por plan de entrenamiento
+    @GetMapping("/by-plan/{planId}")
+    public ResponseEntity<?> getExercisesByPlan(@PathVariable Long planId, Authentication auth) {
+        try {
+            Optional<TrainingPlan> plan = planRepository.findById(planId);
+            if (plan.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            java.util.List<Exercise> exercises = exerciseRepository.findByTrainingPlanId(planId);
+            java.util.List<com.example.gym.dto.ExerciseDTO> exerciseDTOs = exercises.stream()
+                .map(exercise -> {
+                    com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
+                    dto.id = exercise.getId();
+                    dto.name = exercise.getName();
+                    dto.description = exercise.getDescription();
+                    dto.videoUrl = exercise.getVideoUrl();
+                    dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+                    dto.sets = exercise.getSets();
+                    dto.reps = exercise.getReps();
+                    dto.weight = exercise.getWeight();
+                    return dto;
+                })
+                .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(exerciseDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error retrieving exercises for plan: " + e.getMessage());
+        }
+    }
+
     // Endpoint para obtener la URL del video de un ejercicio
     @GetMapping("/video/{id}")
     public ResponseEntity<?> getExerciseVideoInfo(@PathVariable("id") Long id, Authentication auth) {
@@ -29,6 +89,9 @@ public class ExerciseController {
         dto.description = exercise.getDescription();
         dto.videoUrl = exercise.getVideoUrl();
         dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+        dto.sets = exercise.getSets();
+        dto.reps = exercise.getReps();
+        dto.weight = exercise.getWeight();
         return ResponseEntity.ok(dto);
     }
     // Endpoint para subir video y asociarlo a un ejercicio
@@ -61,6 +124,9 @@ public class ExerciseController {
             dto.description = exercise.getDescription();
             dto.videoUrl = exercise.getVideoUrl();
             dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
+            dto.sets = exercise.getSets();
+            dto.reps = exercise.getReps();
+            dto.weight = exercise.getWeight();
             return ResponseEntity.ok(dto);
         } catch (java.io.IOException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading video: " + e.getMessage());
@@ -91,6 +157,9 @@ public class ExerciseController {
         exercise.setDescription(exerciseDto.description);
         exercise.setTrainingPlan(plan.get());
         exercise.setVideoUrl(exerciseDto.videoUrl);
+        exercise.setSets(exerciseDto.sets);
+        exercise.setReps(exerciseDto.reps);
+        exercise.setWeight(exerciseDto.weight);
         Exercise saved = exerciseRepository.save(exercise);
         com.example.gym.dto.ExerciseDTO dto = new com.example.gym.dto.ExerciseDTO();
         dto.id = saved.getId();
@@ -98,6 +167,9 @@ public class ExerciseController {
         dto.description = saved.getDescription();
         dto.videoUrl = saved.getVideoUrl();
         dto.trainingPlanId = saved.getTrainingPlan() != null ? saved.getTrainingPlan().getId() : null;
+        dto.sets = saved.getSets();
+        dto.reps = saved.getReps();
+        dto.weight = saved.getWeight();
         return ResponseEntity.ok(dto);
     }
 }

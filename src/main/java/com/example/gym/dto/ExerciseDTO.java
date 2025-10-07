@@ -6,4 +6,7 @@ public class ExerciseDTO {
     public String description;
     public String videoUrl;
     public Long trainingPlanId;
+    public Integer sets;
+    public Integer reps;
+    public Double weight; // en kg
 }
