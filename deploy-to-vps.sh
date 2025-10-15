@@ -10,10 +10,24 @@
 set -e  # Terminar si cualquier comando falla
 
 # Configuración del VPS
-VPS_HOST="srv1042314"
+VPS_HOST="72.60.245.66"
 VPS_USER="root"
 VPS_PROJECT_PATH="/opt/sigma/SigmaBack"
 LOCAL_PROJECT_PATH="/Users/santiago/Proyectos/SigmaBack"
+
+# Función para verificar conectividad SSH
+check_ssh() {
+    log_info "Verificando conectividad SSH..."
+    if ! ssh -o ConnectTimeout=10 -o BatchMode=yes "${VPS_USER}@${VPS_HOST}" exit 2>/dev/null; then
+        log_error "No se puede conectar al VPS"
+        log_warning "Verifica:"
+        log_warning "1. La IP/hostname del servidor: ${VPS_HOST}"
+        log_warning "2. Que tengas acceso SSH configurado"
+        log_warning "3. Que el servidor esté disponible"
+        exit 1
+    fi
+    log_success "Conectividad SSH verificada"
+}
 
 # Colores para output
 RED='\033[0;31m'
@@ -91,7 +105,10 @@ log_info "Compilando proyecto localmente para verificar..."
 ./mvnw clean compile -q
 log_success "Compilación local exitosa"
 
-# 4. Conectar al VPS y desplegar
+# 4. Verificar conectividad SSH
+check_ssh
+
+# 5. Conectar al VPS y desplegar
 log_info "Conectando al VPS y desplegando..."
 
 ssh "${VPS_USER}@${VPS_HOST}" << 'ENDSSH'

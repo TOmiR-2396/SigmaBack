@@ -52,7 +52,7 @@ Script de administración para gestionar la aplicación en el servidor.
 
 ## 🔧 Configuración del VPS
 
-**Servidor:** srv1042314  
+**Servidor:** 72.60.245.66  
 **Usuario:** root  
 **Ruta del proyecto:** `/opt/sigma/SigmaBack`  
 **Perfil de ejecución:** prod (MySQL)
@@ -109,7 +109,7 @@ Script de administración para gestionar la aplicación en el servidor.
 ./vps-manage.sh connect
 
 # O directamente:
-ssh root@srv1042314
+ssh root@72.60.245.66
 ```
 
 ### Backup antes de desplegar:

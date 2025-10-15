@@ -6,7 +6,7 @@
 # Comandos útiles para gestionar la aplicación en el VPS
 # =================================================================
 
-VPS_HOST="srv1042314"
+VPS_HOST="72.60.245.66"
 VPS_USER="root"
 VPS_PROJECT_PATH="/opt/sigma/SigmaBack"
 
