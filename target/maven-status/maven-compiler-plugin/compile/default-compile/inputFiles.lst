@@ -19,7 +19,6 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Schedule.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/ExerciseController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/RoleRepository.java
-/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/DataInitializer.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/MembershipPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/TrainingPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TrainingPlanController.java

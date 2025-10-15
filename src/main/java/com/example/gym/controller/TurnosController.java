@@ -247,11 +247,11 @@ public class TurnosController {
                 return ResponseEntity.badRequest().body("No se pueden hacer reservas para fechas pasadas");
             }
             
-            // Verificar que el usuario no tenga ya una reserva para ese horario y fecha
+            // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha (fix para reservas canceladas)
             Long existingReservation = reservationRepository
-                .countByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
+                .countConfirmedByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
             if (existingReservation > 0) {
-                return ResponseEntity.badRequest().body("Ya tienes una reserva para este horario y fecha");
+                return ResponseEntity.badRequest().body("Ya tienes una reserva confirmada para este horario y fecha");
             }
             
             // Verificar capacidad disponible

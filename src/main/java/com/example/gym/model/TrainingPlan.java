@@ -24,6 +24,7 @@ public class TrainingPlan {
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
+
     // Relación con ejercicios
     @OneToMany(mappedBy = "trainingPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonIgnore

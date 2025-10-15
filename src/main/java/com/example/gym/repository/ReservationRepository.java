@@ -25,6 +25,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.schedule.id = :scheduleId AND r.date = :date")
     Long countByUserAndScheduleAndDate(@Param("userId") Long userId, @Param("scheduleId") Long scheduleId, @Param("date") LocalDate date);
     
+    // Verificar si un usuario ya tiene reserva CONFIRMADA para un horario y fecha específicos (fix para reservas canceladas)
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.schedule.id = :scheduleId AND r.date = :date AND r.status = 'CONFIRMED'")
+    Long countConfirmedByUserAndScheduleAndDate(@Param("userId") Long userId, @Param("scheduleId") Long scheduleId, @Param("date") LocalDate date);
+    
     // Buscar todas las reservas confirmadas con JOIN FETCH
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.schedule s WHERE r.status = 'CONFIRMED' ORDER BY r.date DESC, s.startTime")
     List<Reservation> findAllConfirmedReservations();
