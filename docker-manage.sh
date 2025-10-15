@@ -77,7 +77,7 @@ case "$1" in
         ssh "${VPS_USER}@${VPS_HOST}" "
             cd ${VPS_PROJECT_PATH}
             if docker ps | grep -q 'gym-backend'; then
-                docker-compose stop gym-backend
+                docker-compose stop backend
                 echo -e '${GREEN}✅ Container detenido${NC}'
             else
                 echo -e '${YELLOW}⚠️  El container ya estaba detenido${NC}'
@@ -91,7 +91,7 @@ case "$1" in
             if docker ps | grep -q 'gym-backend'; then
                 echo -e '${YELLOW}⚠️  El container ya está corriendo${NC}'
             else
-                docker-compose up -d gym-backend
+                docker-compose up -d backend
                 sleep 3
                 if docker ps | grep -q 'gym-backend'; then
                     echo -e '${GREEN}✅ Container iniciado exitosamente${NC}'
@@ -105,7 +105,7 @@ case "$1" in
         echo -e "${YELLOW}🔄 Reiniciando container gym-backend...${NC}"
         ssh "${VPS_USER}@${VPS_HOST}" "
             cd ${VPS_PROJECT_PATH}
-            docker-compose restart gym-backend
+            docker-compose restart backend
             sleep 3
             if docker ps | grep -q 'gym-backend'; then
                 echo -e '${GREEN}✅ Container reiniciado exitosamente${NC}'
@@ -120,11 +120,11 @@ case "$1" in
         ssh "${VPS_USER}@${VPS_HOST}" "
             cd ${VPS_PROJECT_PATH}
             echo 'Deteniendo container...'
-            docker-compose stop gym-backend
+            docker-compose stop backend
             echo 'Reconstruyendo imagen...'
-            docker-compose build gym-backend --no-cache
+            docker-compose build backend --no-cache
             echo 'Iniciando container...'
-            docker-compose up -d gym-backend
+            docker-compose up -d backend
             sleep 5
             if docker ps | grep -q 'gym-backend'; then
                 echo -e '${GREEN}✅ Container reconstruido y iniciado exitosamente${NC}'

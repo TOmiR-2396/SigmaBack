@@ -45,9 +45,9 @@ echo -e "${YELLOW}"
 cat << 'EOF'
 cd /opt/sigma/SigmaBack
 git pull origin main
-docker-compose stop gym-backend
-docker-compose build gym-backend --no-cache
-docker-compose up -d gym-backend
+docker-compose stop backend
+docker-compose build backend --no-cache
+docker-compose up -d backend
 docker ps
 docker logs gym-backend --tail=20
 EOF
@@ -79,13 +79,13 @@ echo "📥 Descargando últimos cambios..."
 git pull origin main
 
 echo "🛑 Deteniendo container anterior..."
-docker-compose stop gym-backend || echo "Container no estaba corriendo"
+docker-compose stop backend || echo "Container no estaba corriendo"
 
 echo "🔨 Construyendo nueva imagen Docker..."
-docker-compose build gym-backend --no-cache
+docker-compose build backend --no-cache
 
 echo "🚀 Iniciando container actualizado..."
-docker-compose up -d gym-backend
+docker-compose up -d backend
 
 sleep 5
 
