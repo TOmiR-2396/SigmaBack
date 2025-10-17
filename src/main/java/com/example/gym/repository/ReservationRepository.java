@@ -32,4 +32,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Buscar todas las reservas confirmadas con JOIN FETCH
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.schedule s WHERE r.status = 'CONFIRMED' ORDER BY r.date DESC, s.startTime")
     List<Reservation> findAllConfirmedReservations();
+
+
 }

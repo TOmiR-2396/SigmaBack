@@ -247,31 +247,11 @@ public class TurnosController {
                 return ResponseEntity.badRequest().body("No se pueden hacer reservas para fechas pasadas");
             }
             
-            // =================== DEBUG LOGS - BORRAR DESPUÉS ===================
-            System.out.println("🔍 [DEBUG] Verificando reservas existentes para:");
-            System.out.println("  - Usuario ID: " + currentUser.getId());
-            System.out.println("  - Schedule ID: " + request.getScheduleId());
-            System.out.println("  - Fecha: " + reservationDate);
-            // ====================================================================
-            
+        
             // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha (fix para reservas canceladas)
             Long existingReservation = reservationRepository
                 .countConfirmedByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
             
-            // =================== DEBUG LOGS - BORRAR DESPUÉS ===================
-            System.out.println("🔍 [DEBUG] Resultado de countConfirmedByUserAndScheduleAndDate: " + existingReservation);
-            // ====================================================================
-            
-            if (existingReservation > 0) {
-                // =================== DEBUG LOGS - BORRAR DESPUÉS ===================
-                System.out.println("❌ [DEBUG] Encontrada reserva existente, rechazando");
-                // ====================================================================
-                return ResponseEntity.badRequest().body("Ya tienes una reserva confirmada para este horario y fecha");
-            }
-            
-            // =================== DEBUG LOGS - BORRAR DESPUÉS ===================
-            System.out.println("✅ [DEBUG] No hay reservas confirmadas, continuando...");
-            // ====================================================================
             
             // Verificar capacidad disponible
             Long currentReservations = reservationRepository
