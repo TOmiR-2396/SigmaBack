@@ -2,11 +2,14 @@ package com.example.gym.repository;
 
 import com.example.gym.model.Schedule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
@@ -44,4 +47,9 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
                                                            @Param("startTime") java.time.LocalTime startTime,
                                                            @Param("endTime") java.time.LocalTime endTime,
                                                            @Param("excludeId") Long excludeId);
+
+       // Obtener un horario con bloqueo PESSIMISTIC_WRITE para evitar sobre-reservas concurrentes
+       @Lock(LockModeType.PESSIMISTIC_WRITE)
+       @Query("SELECT s FROM Schedule s WHERE s.id = :id")
+       Optional<Schedule> findByIdForUpdate(@Param("id") Long id);
 }

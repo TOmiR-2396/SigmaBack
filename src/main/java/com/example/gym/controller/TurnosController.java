@@ -4,10 +4,14 @@ import com.example.gym.dto.*;
 import com.example.gym.model.*;
 import com.example.gym.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -217,6 +221,7 @@ public class TurnosController {
 
     // POST /api/turnos/reservation - Hacer reserva
     @PostMapping("/reservation")
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public ResponseEntity<?> makeReservation(@RequestBody ReservationRequest request, Authentication auth) {
         try {
             User currentUser = (User) auth.getPrincipal();
@@ -228,8 +233,8 @@ public class TurnosController {
             
             LocalDate reservationDate = LocalDate.parse(request.getDate());
             
-            // Verificar que el horario existe
-            Optional<Schedule> scheduleOpt = scheduleRepository.findById(request.getScheduleId());
+            // Verificar que el horario existe con bloqueo pesimista
+            Optional<Schedule> scheduleOpt = scheduleRepository.findByIdForUpdate(request.getScheduleId());
             if (scheduleOpt.isEmpty() || !scheduleOpt.get().getIsActive()) {
                 return ResponseEntity.badRequest().body("Horario no encontrado o no disponible");
             }
@@ -251,6 +256,10 @@ public class TurnosController {
             // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha (fix para reservas canceladas)
             Long existingReservation = reservationRepository
                 .countConfirmedByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
+            if (existingReservation != null && existingReservation > 0) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                     .body("Ya tienes una reserva confirmada para este horario y fecha");
+            }
             
             
             // Verificar capacidad disponible
@@ -268,8 +277,15 @@ public class TurnosController {
                 .status(Reservation.ReservationStatus.CONFIRMED)
                 .build();
             
-            Reservation saved = reservationRepository.save(reservation);
+            Reservation saved = reservationRepository.saveAndFlush(reservation);
             return ResponseEntity.ok(mapReservationToDTO(saved));
+        } catch (DataIntegrityViolationException ex) {
+            // Violación de la restricción única (duplicado o carrera)
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                                 .body("Reserva duplicada o cupo agotado por concurrencia. Intenta nuevamente.");
+        } catch (jakarta.persistence.PessimisticLockException | ObjectOptimisticLockingFailureException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                                 .body("El turno está siendo reservado por otros usuarios. Intenta nuevamente.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Error al hacer reserva: " + e.getMessage());

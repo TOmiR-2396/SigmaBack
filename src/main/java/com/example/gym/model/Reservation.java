@@ -1,12 +1,26 @@
 package com.example.gym.model;
 
 import jakarta.persistence.*;
+import jakarta.persistence.Index;
+import jakarta.persistence.UniqueConstraint;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reservations")
+@Table(
+    name = "reservations",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_res_unique_user_schedule_date_status",
+            columnNames = {"user_id", "schedule_id", "date", "status"}
+        )
+    },
+    indexes = {
+        @Index(name = "idx_res_schedule_date_status", columnList = "schedule_id,date,status"),
+        @Index(name = "idx_res_user_schedule_date_status", columnList = "user_id,schedule_id,date,status")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
