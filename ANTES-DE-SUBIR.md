@@ -19,8 +19,13 @@ cd /opt/sigma/SigmaBack
 # Crear directorio de backups si no existe
 mkdir -p backups
 
-# Crear backup con timestamp
-docker exec gym-mysql mysqldump -u gymuser -pgympass --routines --triggers --single-transaction gymdb > backups/gymdb_backup_$(date +%Y%m%d_%H%M%S).sql
+# Crear backup con timestamp (sin tablespaces para evitar privilegio PROCESS)
+docker exec gym-mysql mysqldump -u gymuser -pgympass \
+  --routines --triggers --single-transaction --no-tablespaces \
+  gymdb > backups/gymdb_backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Opcional: comprimir el backup para ahorrar espacio
+gzip -9 backups/gymdb_backup_*.sql
 
 # Verificar que el backup se creó correctamente
 ls -la backups/
@@ -68,6 +73,10 @@ docker-compose stop backend
 ### 4. **ELIMINAR CONTAINER BACKEND ANTERIOR**
 ```bash
 docker rm gym-backend
+
+# Si ves: "container is running" entonces primero detenelo o fuerza la eliminación
+docker stop gym-backend || true
+docker rm -f gym-backend
 ```
 
 ### 5. **RECONSTRUIR LA IMAGEN BACKEND**
@@ -77,7 +86,26 @@ docker-compose build --no-cache backend
 
 ### 6. **INICIAR EL BACKEND ACTUALIZADO**
 ```bash
-docker-compose up -d backend
+# Opción A: Usar compose sin recrear MySQL (RECOMENDADO)
+docker-compose up -d --no-recreate backend
+
+# Opción B: Si gym-backend no existe, créalo directamente con docker run
+docker run -d \
+  --name gym-backend \
+  --network sigmaback_gym-network \
+  -p 127.0.0.1:8080:8080 \
+  -e SPRING_DATASOURCE_URL="jdbc:mysql://gym-mysql:3306/gymdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+  -e SPRING_DATASOURCE_USERNAME="gymuser" \
+  -e SPRING_DATASOURCE_PASSWORD="gympass" \
+  -e SPRING_PROFILES_ACTIVE="docker" \
+  -e JWT_SECRET="Z3xO1raNs7SJxocFht4wpds4AYoo7Q9QbRMaOST6H9dtq7vzKrh/+eoB6c036Du6Mr2tlv0w2joGUetlHu6Hxg==" \
+  -e JWT_EXPIRATION="86400000" \
+  -e JAVA_OPTS="-Xms256m -Xmx512m" \
+  --restart unless-stopped \
+  sigmaback-backend
+
+# Opción C: Si gym-backend ya existe y está detenido
+docker start gym-backend
 ```
 
 ### 7. **VERIFICAR QUE TODO FUNCIONE**

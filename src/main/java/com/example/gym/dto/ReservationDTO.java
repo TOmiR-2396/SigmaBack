@@ -13,6 +13,10 @@ public class ReservationDTO {
     public String userName; // Para vista del owner
     public String userEmail;
     public String userPhone; // nullable
+    
+    // Campos de presentismo/asistencia
+    public Boolean attended; // true si asistió, false si no
+    public String attendedAt; // Timestamp cuando se marcó asistencia (nullable)
 
     // Constructor por defecto
     public ReservationDTO() {}
@@ -112,5 +116,21 @@ public class ReservationDTO {
 
     public void setUserPhone(String userPhone) {
         this.userPhone = userPhone;
+    }
+
+    public Boolean getAttended() {
+        return attended;
+    }
+
+    public void setAttended(Boolean attended) {
+        this.attended = attended;
+    }
+
+    public String getAttendedAt() {
+        return attendedAt;
+    }
+
+    public void setAttendedAt(String attendedAt) {
+        this.attendedAt = attendedAt;
     }
 }

@@ -326,6 +326,44 @@ public class TurnosController {
         }
     }
 
+    // PUT /api/turnos/reservation/{reservationId}/attendance - Marcar presentismo/asistencia
+    @PutMapping("/reservation/{reservationId}/attendance")
+    @PreAuthorize("hasRole('OWNER') or hasRole('TRAINER')")
+    public ResponseEntity<?> markAttendance(@PathVariable Long reservationId, @RequestBody AttendanceRequest request) {
+        try {
+            Optional<Reservation> reservationOpt = reservationRepository.findById(reservationId);
+            if (reservationOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Reservation reservation = reservationOpt.get();
+            
+            // Solo se puede marcar asistencia en reservas CONFIRMADAS
+            if (reservation.getStatus() != Reservation.ReservationStatus.CONFIRMED) {
+                return ResponseEntity.badRequest()
+                    .body("Solo se puede marcar asistencia en reservas confirmadas");
+            }
+            
+            // Actualizar el estado de asistencia
+            reservation.setAttended(request.getAttended());
+            
+            // Si se marca como presente, registrar la fecha/hora
+            if (request.getAttended()) {
+                reservation.setAttendedAt(LocalDateTime.now());
+            } else {
+                // Si se desmarca, limpiar la fecha
+                reservation.setAttendedAt(null);
+            }
+            
+            reservationRepository.save(reservation);
+            
+            return ResponseEntity.ok(mapReservationToDTO(reservation));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al marcar asistencia: " + e.getMessage());
+        }
+    }
+
     // GET /api/turnos/my-reservations - Obtener mis reservas
     @GetMapping("/my-reservations")
     public ResponseEntity<?> getUserReservations(Authentication auth) {
@@ -415,6 +453,12 @@ public class TurnosController {
                 dto.setCancelledAt(reservation.getCancelledAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             }
             
+            // Campos de presentismo/asistencia
+            dto.setAttended(reservation.getAttended() != null ? reservation.getAttended() : false);
+            if (reservation.getAttendedAt() != null) {
+                dto.setAttendedAt(reservation.getAttendedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            }
+            
             // Información del usuario - manejo seguro de valores nulos
             User user = reservation.getUser();
             if (user != null) {
@@ -440,6 +484,7 @@ public class TurnosController {
             errorDto.setId(reservation.getId());
             errorDto.setDate(reservation.getDate().toString());
             errorDto.setStatus(reservation.getStatus().name());
+            errorDto.setAttended(false);
             errorDto.setUserName("Error al cargar datos");
             errorDto.setUserEmail("");
             errorDto.setUserPhone("");

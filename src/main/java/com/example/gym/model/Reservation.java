@@ -53,6 +53,14 @@ public class Reservation {
     @Builder.Default
     private ReservationStatus status = ReservationStatus.CONFIRMED;
 
+    // Campos de presentismo/asistencia
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean attended = false;
+
+    @Column
+    private LocalDateTime attendedAt;
+
     public enum ReservationStatus {
         CONFIRMED, CANCELLED
     }
