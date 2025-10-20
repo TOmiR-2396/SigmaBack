@@ -1,14 +1,32 @@
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:prod}
+  mail:
+    host: ${MAIL_HOST:smtp.envialosimple.email}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        transport:
+          protocol: smtp
 
 jwt:
   secret: "YjFhMmMzZDRlNWY2ZzdoOGk5ajBrMWwybTNuNG81cDZxN3I4czl0MHUxdjJ3M3g0eTV6NmE3YjhjOWQwZTFmMmczaDRpNWo2azdsOG05bjBvMXAy"
 
-# Resend Email Configuration
-resend:
-  api:
-    key: "re_TPpcUdx1_3SE1iat5PUgvL3VuAxLkDfL1"
+# Dirección remitente por defecto (opcional). También puede venir de env: MAIL_FROM
+mail:
+  from: ${MAIL_FROM:}
+
+# URL base del frontend para reset de contraseña (debe terminar en ?token=)
+app:
+  frontend:
+    reset-url: ${APP_FRONTEND_RESET_URL:http://localhost:5173/reset-password?token=}
 
 ---
 spring:

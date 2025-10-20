@@ -1,49 +1,51 @@
 package com.example.gym.service;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.SendEmailRequest;
-import com.resend.services.emails.model.SendEmailResponse;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
-    
-    // Tu API key de Resend (mejor ponerla en application.yml)
-    @Value("${resend.api.key:re_TPpcUdx1_3SE1iat5PUgvL3VuAxLkDfL1}")
-    private String resendApiKey;
-    
+
+    private final JavaMailSender mailSender;
+
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    @Value("${mail.from:noreply@sigmagym.com.ar}")
+    private String mailFrom;
+
+    @Value("${app.frontend.reset-url:http://localhost:5173/reset-password?token=}")
+    private String resetBaseUrl;
+
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
         try {
-            Resend resend = new Resend(resendApiKey);
-            
-            // Crear URL de reset con el token - apuntando al frontend
-            String resetUrl = "http://localhost:5173/reset-password?token=" + resetToken;
-            
-            // Crear HTML del email
+            // Construir URL al frontend
+            String resetUrl = resetBaseUrl + resetToken;
+
+            // Crear mensaje HTML
             String htmlContent = buildPasswordResetHtml(resetUrl, toEmail);
-            
-            SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
-                    .from("noreply@resend.dev") // Cambia por tu dominio cuando tengas uno
-                    .to(toEmail) // Email del usuario que solicita el cambio
-                    .subject("Recuperar Contraseña - Gym App")
-                    .html(htmlContent)
-                    .build();
-            
-            SendEmailResponse response = resend.emails().send(sendEmailRequest);
-            
-            System.out.println("Email enviado exitosamente. ID: " + response.getId());
-            
-        } catch (ResendException e) {
-            System.err.println("Error de Resend: " + e.getMessage());
-            throw new RuntimeException("Error al enviar email de recuperación", e);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(new InternetAddress(mailFrom));
+            helper.setTo(toEmail);
+            helper.setSubject("Recuperar Contraseña - Sigma Gym");
+            helper.setText(htmlContent, true); // HTML
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Error creando el email de recuperación", e);
         } catch (Exception e) {
-            System.err.println("Error general enviando email: " + e.getMessage());
             throw new RuntimeException("Error al enviar email de recuperación", e);
         }
     }
-    
+
     private String buildPasswordResetHtml(String resetUrl, String userEmail) {
         return "<!DOCTYPE html>" +
                "<html>" +

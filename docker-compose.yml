@@ -5,15 +5,28 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"   # solo loopback (no público)
+    # Carga opcional de variables desde archivo .env (no se commitea)
+    env_file: .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gymdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: gymuser
       SPRING_DATASOURCE_PASSWORD: gympass
-      SPRING_PROFILES_ACTIVE: docker
+      # Usa el perfil 'prod' definido en application.yml
+      SPRING_PROFILES_ACTIVE: prod
+      # Asegura que el backend escuche en 8080 dentro del contenedor
+      PORT: "8080"
       JWT_SECRET: "Z3xO1raNs7SJxocFht4wpds4AYoo7Q9QbRMaOST6H9dtq7vzKrh/+eoB6c036Du6Mr2tlv0w2joGUetlHu6Hxg=="
       JWT_EXPIRATION: "86400000"   # 1 día en ms
       # Opcional: JAVA_OPTS para limitar memoria
       JAVA_OPTS: "-Xms256m -Xmx512m"
+      # SMTP (se leen de .env o del entorno)
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      # URL base del frontend para reset password (debe terminar en ?token=)
+      APP_FRONTEND_RESET_URL: ${APP_FRONTEND_RESET_URL}
     depends_on:
       mysql:
         condition: service_healthy
