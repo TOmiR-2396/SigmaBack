@@ -3,6 +3,8 @@ package com.example.gym.controller;
 import com.example.gym.dto.*;
 import com.example.gym.model.*;
 import com.example.gym.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/turnos")
 public class TurnosController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TurnosController.class);
     
     @Autowired
     private ScheduleRepository scheduleRepository;
@@ -379,11 +383,10 @@ public class TurnosController {
             List<ReservationDTO> reservationDTOs = mapReservationsToDTO(reservations);
             return ResponseEntity.ok(reservationDTOs);
         } catch (Exception e) {
-            // Log del error para debug
-            System.err.println("Error in getUserReservations: " + e.getMessage());
-            e.printStackTrace();
+            // Log interno del error (no exponer detalles al cliente)
+            logger.error("Error al obtener reservas del usuario", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Error al obtener reservas: " + e.getMessage());
+                                 .body("Error al obtener reservas");
         }
     }
 
@@ -475,9 +478,8 @@ public class TurnosController {
             
             return dto;
         } catch (Exception e) {
-            // Log del error específico en el mapeo
-            System.err.println("Error mapping reservation to DTO for reservation ID: " + reservation.getId());
-            e.printStackTrace();
+            // Log interno del error en el mapeo
+            logger.error("Error mapeando reserva ID: " + reservation.getId(), e);
             
             // Crear un DTO básico en caso de error
             ReservationDTO errorDto = new ReservationDTO();

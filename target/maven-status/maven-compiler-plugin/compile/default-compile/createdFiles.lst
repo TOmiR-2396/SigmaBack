@@ -34,6 +34,7 @@ com/example/gym/model/Role$RoleBuilder.class
 com/example/gym/dto/AvailableSlotDTO.class
 com/example/gym/service/PasswordResetService.class
 com/example/gym/dto/ReservationDTO.class
+com/example/gym/dto/AttendanceRequest.class
 com/example/gym/model/Reservation.class
 com/example/gym/model/Subscription.class
 com/example/gym/model/Attendance.class

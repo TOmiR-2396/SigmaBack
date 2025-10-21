@@ -59,7 +59,7 @@ public class JwtUtil {
                 .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            System.out.println("Token inválido: " + e.getMessage());
+            // Token inválido - no loguear detalles en producción por seguridad
             return false;
         }
     }

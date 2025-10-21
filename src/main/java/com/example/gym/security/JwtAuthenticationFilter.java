@@ -48,8 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 email = jwtUtil.getEmailFromToken(token);
             } catch (Exception e) {
-                // Token inválido o expirado
-                System.out.println("Token error: " + e.getMessage());
+                // Token inválido o expirado - no loguear detalles en producción
             }
         }
         
