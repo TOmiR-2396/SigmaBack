@@ -33,5 +33,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.schedule s WHERE r.status = 'CONFIRMED' ORDER BY r.date DESC, s.startTime")
     List<Reservation> findAllConfirmedReservations();
 
+    // Buscar todas las reservas (cualquier status) asociadas a un schedule
+    List<Reservation> findByScheduleId(Long scheduleId);
+
+    // Buscar reservas por schedule y status
+    List<Reservation> findByScheduleIdAndStatus(Long scheduleId, Reservation.ReservationStatus status);
+
 
 }

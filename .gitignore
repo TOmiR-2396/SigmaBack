@@ -25,3 +25,7 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Media y artefactos de deploy
+videos/
+deploy_*.tar.gz

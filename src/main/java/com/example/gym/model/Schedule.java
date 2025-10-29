@@ -2,7 +2,10 @@ package com.example.gym.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.ToString;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "schedules")
@@ -37,4 +40,11 @@ public class Schedule {
 
     @Column
     private String description;
+
+    // Reservas asociadas a este horario. Se eliminan en cascada al borrar el schedule.
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
+    private List<Reservation> reservations = new ArrayList<>();
 }

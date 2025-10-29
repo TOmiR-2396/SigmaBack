@@ -176,15 +176,25 @@ public class TurnosController {
                 return ResponseEntity.notFound().build();
             }
 
-            // En lugar de eliminar físicamente, marcamos como inactivo
+            // Eliminamos el schedule y las reservas asociadas en cascada
             Schedule schedule = scheduleOpt.get();
-            schedule.setIsActive(false);
-            scheduleRepository.save(schedule);
 
-            return ResponseEntity.ok("Horario eliminado exitosamente");
+            // Obtener reservas confirmadas (por si queremos notificar)
+            List<Reservation> confirmed = reservationRepository.findByScheduleIdAndStatus(scheduleId, Reservation.ReservationStatus.CONFIRMED);
+            if (!confirmed.isEmpty()) {
+                logger.info("Eliminando schedule {} que tiene {} reservas confirmadas", scheduleId, confirmed.size());
+                // TODO: notificar a los usuarios afectados (opcional)
+            }
+
+            // La relación en Schedule está configurada con cascade ALL y orphanRemoval=true
+            // por lo que al eliminar el schedule, las reservas asociadas se eliminarán también.
+            scheduleRepository.delete(schedule);
+
+            return ResponseEntity.ok("Schedule y sus reservas eliminados exitosamente");
         } catch (Exception e) {
+            logger.error("Error al eliminar schedule {}", scheduleId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Error al eliminar horario: " + e.getMessage());
+                                 .body("Error al eliminar schedule");
         }
     }
 

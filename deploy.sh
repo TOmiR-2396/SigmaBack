@@ -78,22 +78,30 @@ docker exec gym-mysql mysqldump -u gymuser -pgympass \
 
 echo "✅ Backup creado"
 
-# 3. Aplicar migraciones SQL (si existen)
-if [ -f "migrations/add_attendance_simple.sql" ]; then
-    echo "🔄 Aplicando migraciones de base de datos..."
+# 3. Aplicar migraciones SQL (verificar primero si ya existen)
+echo "🔄 Verificando migraciones de base de datos..."
+
+# Verificar si la columna 'attended' ya existe
+COLUMN_EXISTS=$(docker exec gym-mysql mysql -u gymuser -pgympass gymdb -N -s -e \
+  "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='gymdb' AND TABLE_NAME='reservations' AND COLUMN_NAME='attended';" 2>/dev/null || echo "0")
+
+if [ "$COLUMN_EXISTS" = "0" ]; then
+    echo "� Aplicando migración: agregando columnas de asistencia..."
     docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'SQL'
 ALTER TABLE reservations 
-  ADD COLUMN IF NOT EXISTS attended TINYINT(1) NOT NULL DEFAULT 0 
+  ADD COLUMN attended TINYINT(1) NOT NULL DEFAULT 0 
   COMMENT 'Indica si el usuario asistió';
+
 ALTER TABLE reservations 
-  ADD COLUMN IF NOT EXISTS attended_at DATETIME NULL 
+  ADD COLUMN attended_at DATETIME NULL 
   COMMENT 'Fecha y hora cuando se marcó la asistencia';
-CREATE INDEX IF NOT EXISTS idx_reservations_attended_date 
+
+CREATE INDEX idx_reservations_attended_date 
   ON reservations(attended, date);
 SQL
-    echo "✅ Migraciones aplicadas"
+    echo "✅ Migraciones aplicadas correctamente"
 else
-    echo "ℹ️  No hay migraciones SQL que aplicar"
+    echo "ℹ️  Las columnas de asistencia ya existen, omitiendo migración"
 fi
 
 # 4. Copiar archivos al directorio de trabajo
