@@ -44,7 +44,15 @@ tar -xzf $DEPLOY_FILE
 cd $DEPLOY_DIR
 echo ""
 echo "🚀 Iniciando instalación..."
-./install.sh
+# Ejecutar instalación backend-only (no toca MySQL)
+if [ -f ./install-fix.sh ]; then
+    echo "Usando install-fix.sh (solo backend, MySQL intacto)"
+    ./install-fix.sh
+else
+    echo "❌ No se encontró install-fix.sh en el paquete desplegado."
+    echo "   Verifica que el paquete incluya el script o súbelo manualmente."
+    exit 1
+fi
 EOF
 
 echo ""
