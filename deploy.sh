@@ -19,8 +19,9 @@ echo "📋 Copiando archivos necesarios..."
 # 3. Copiar el JAR compilado
 cp target/gym-*.jar "$DEPLOY_DIR/app.jar"
 
-# 4. Copiar Dockerfile
+# 4. Copiar Dockerfile (build local) y Dockerfile.deploy (usa app.jar generado)
 cp Dockerfile "$DEPLOY_DIR/"
+cp Dockerfile.deploy "$DEPLOY_DIR/"
 
 # 5. (omitido) No incluimos docker-compose ni migraciones ni docs para backend-only
 

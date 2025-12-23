@@ -1,6 +1,7 @@
 com/example/gym/controller/UserController.class
 com/example/gym/repository/AttendanceRepository.class
 com/example/gym/dto/ScheduleDTO.class
+com/example/gym/model/ExerciseProgress.class
 com/example/gym/dto/ReservationRequest.class
 com/example/gym/controller/ExerciseController.class
 com/example/gym/model/Reservation$ReservationBuilder.class
@@ -12,6 +13,7 @@ com/example/gym/model/Exercise.class
 com/example/gym/security/JwtAuthenticationFilter.class
 com/example/gym/repository/RoleRepository.class
 com/example/gym/dto/MembershipInfoDTO.class
+com/example/gym/repository/ExerciseProgressRepository.class
 com/example/gym/repository/PasswordResetTokenRepository.class
 com/example/gym/model/PasswordResetToken$PasswordResetTokenBuilder.class
 com/example/gym/model/Reservation$ReservationStatus.class
@@ -55,4 +57,5 @@ com/example/gym/service/EmailService.class
 com/example/gym/dto/MembershipPlanDTO.class
 com/example/gym/controller/TrainingPlanController.class
 com/example/gym/service/RoleService.class
+com/example/gym/dto/ProgressHistoryDTO.class
 com/example/gym/model/Role$RoleName.class

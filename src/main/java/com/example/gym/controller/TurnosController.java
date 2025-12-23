@@ -320,7 +320,8 @@ public class TurnosController {
             LocalDate target = LocalDate.parse(date);
             Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
             if (scheduleOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Horario no encontrado (ID: " + scheduleId + ")");
             }
             Schedule schedule = scheduleOpt.get();
 
@@ -360,7 +361,8 @@ public class TurnosController {
             LocalDate target = LocalDate.parse(date);
             Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
             if (scheduleOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Horario no encontrado (ID: " + scheduleId + ")");
             }
             Schedule schedule = scheduleOpt.get();
 
@@ -370,6 +372,80 @@ public class TurnosController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Error al quitar pausa: " + e.getMessage());
+        }
+    }
+
+    // OWNER: Pausar DÍA COMPLETO (todos los schedules activos de ese día)
+    @PutMapping("/pause-day")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> pauseEntireDay(@RequestParam String date) {
+        try {
+            LocalDate target = LocalDate.parse(date);
+            Integer dayOfWeek = target.getDayOfWeek().getValue() % 7;
+            
+            List<Schedule> schedulesForDay = scheduleRepository.findByDayOfWeekAndIsActive(dayOfWeek);
+            if (schedulesForDay.isEmpty()) {
+                return ResponseEntity.ok("No hay horarios activos para pausar en este día");
+            }
+
+            int pausedCount = 0;
+            int cancelledReservations = 0;
+            
+            for (Schedule schedule : schedulesForDay) {
+                // Añadir fecha a pausedDates
+                schedule.setPausedDates(addDateToCsv(schedule.getPausedDates(), target));
+                scheduleRepository.save(schedule);
+                pausedCount++;
+                
+                // Cancelar reservas confirmadas de ese schedule en esa fecha
+                List<Reservation> toCancel = reservationRepository
+                        .findByScheduleIdAndDateAndStatus(schedule.getId(), target, Reservation.ReservationStatus.CONFIRMED);
+                for (Reservation r : toCancel) {
+                    r.setStatus(Reservation.ReservationStatus.CANCELLED);
+                    r.setCancelledAt(LocalDateTime.now());
+                    cancelledReservations++;
+                }
+                if (!toCancel.isEmpty()) {
+                    reservationRepository.saveAll(toCancel);
+                }
+            }
+            
+            return ResponseEntity.ok(String.format(
+                "Día pausado: %d horarios pausados, %d reservas canceladas",
+                pausedCount, cancelledReservations));
+        } catch (Exception e) {
+            logger.error("Error al pausar día completo", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al pausar día completo: " + e.getMessage());
+        }
+    }
+
+    // OWNER: Despausar DÍA COMPLETO (todos los schedules del día)
+    @DeleteMapping("/pause-day")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> unpauseEntireDay(@RequestParam String date) {
+        try {
+            LocalDate target = LocalDate.parse(date);
+            Integer dayOfWeek = target.getDayOfWeek().getValue() % 7;
+            
+            List<Schedule> schedulesForDay = scheduleRepository.findByDayOfWeekAndIsActive(dayOfWeek);
+            if (schedulesForDay.isEmpty()) {
+                return ResponseEntity.ok("No hay horarios activos para despausar en este día");
+            }
+
+            int unpausedCount = 0;
+            for (Schedule schedule : schedulesForDay) {
+                schedule.setPausedDates(removeDateFromCsv(schedule.getPausedDates(), target));
+                scheduleRepository.save(schedule);
+                unpausedCount++;
+            }
+            
+            return ResponseEntity.ok(String.format(
+                "Día despausado: %d horarios despausados", unpausedCount));
+        } catch (Exception e) {
+            logger.error("Error al despausar día completo", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al despausar día completo: " + e.getMessage());
         }
     }
 

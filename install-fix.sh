@@ -16,17 +16,18 @@ fi
 echo "📦 Copiando archivos..."
 mkdir -p /opt/sigma/SigmaBack/target
 cp -f app.jar /opt/sigma/SigmaBack/target/gym-0.0.1-SNAPSHOT.jar
-cp -f Dockerfile /opt/sigma/SigmaBack/
+cp -f app.jar /opt/sigma/SigmaBack/app.jar
+cp -f Dockerfile.deploy /opt/sigma/SigmaBack/
 
 # 2. Detener y eliminar contenedor backend
 echo "🛑 Deteniendo contenedor backend..."
 docker stop gym-backend 2>/dev/null || true
 docker rm gym-backend 2>/dev/null || true
 
-# 3. Reconstruir imagen (sin compose)
+# 3. Reconstruir imagen (sin compose) usando el jar ya generado
 echo "🔨 Reconstruyendo imagen backend..."
 cd /opt/sigma/SigmaBack
-docker build -t sigmaback-backend .
+docker build -t sigmaback-backend -f Dockerfile.deploy .
 
 # 4. Levantar SOLO el backend (sin compose para evitar recrear MySQL)
 echo "🚀 Iniciando backend..."

@@ -135,6 +135,41 @@ Notas de uso rápido (luego del deploy del backend con esta feature):
 - Pausar un día para un horario: `PUT /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
 - Quitar pausa: `DELETE /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
 - Efectos: ese día no aparecerá en disponibilidad y cualquier intento de reservar ese día será rechazado; además, al pausar se cancelan únicamente las reservas confirmadas de esa fecha para ese horario.
+
+### 4.c **APLICAR MIGRACIÓN DE PROGRESIÓN DE EJERCICIOS (SOLO LA PRIMERA VEZ)**
+Se agregó la tabla `exercise_progress` para guardar el histórico de cambios en los ejercicios y calcular porcentaje de mejora.
+
+```bash
+# Verificar si la tabla ya existe
+docker exec -it gym-mysql mysql -u gymuser -pgympass -N -s -e \
+  "SELECT COUNT(*) FROM information_schema.TABLES \
+     WHERE TABLE_SCHEMA='gymdb' AND TABLE_NAME='exercise_progress';"
+
+# Si el resultado fue 0, ejecutar el CREATE TABLE:
+docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
+CREATE TABLE exercise_progress (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  exercise_id BIGINT NOT NULL,
+  weight DOUBLE NOT NULL,
+  sets INT,
+  reps INT,
+  recorded_at DATETIME NOT NULL,
+  notes VARCHAR(500) NULL,
+  CONSTRAINT fk_exercise_id FOREIGN KEY (exercise_id) 
+    REFERENCES ejercicios(id) ON DELETE CASCADE,
+  INDEX idx_exercise_recorded (exercise_id, recorded_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+EOF
+
+# Verificar que se creó correctamente
+docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE exercise_progress;"
+```
+
+Notas de uso (luego del deploy del backend con esta feature):
+- El histórico se captura automáticamente al actualizar un ejercicio
+- GET `/api/exercises/{id}` devuelve: `weight`, `previousWeight`, `progressPercentage`, `progressHistory`
+- GET `/api/exercises/{id}/progress` devuelve todo el histórico completo
+- PUT `/api/exercises/{id}` guarda un registro de progreso antes de actualizar los valores
 ```
 
 ### 5. **DETENER SOLO EL BACKEND (PRESERVAR MYSQL)**
