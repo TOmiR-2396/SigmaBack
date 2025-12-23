@@ -110,6 +110,31 @@ EOF
 
 # Verificar que se aplicó correctamente
 docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE reservations;"
+
+### 4.b **APLICAR MIGRACIÓN DE PAUSAS POR FECHA (SOLO LA PRIMERA VEZ)**
+Para habilitar la pausa por fecha de un horario, se agregó el campo `paused_dates` en la tabla `schedules`. Esta migración se corre una sola vez.
+
+```bash
+# Verificar si la columna ya existe (compatible MySQL 5.7/8.0)
+docker exec -it gym-mysql mysql -u gymuser -pgympass -N -s -e \
+  "SELECT COUNT(*) FROM information_schema.COLUMNS \
+     WHERE TABLE_SCHEMA='gymdb' AND TABLE_NAME='schedules' AND COLUMN_NAME='paused_dates';"
+
+# Si el resultado fue 0, ejecutar el ALTER:
+docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
+ALTER TABLE schedules 
+  ADD COLUMN paused_dates VARCHAR(1000) NULL 
+  COMMENT 'Fechas pausadas CSV YYYY-MM-DD';
+EOF
+
+# Verificar que se aplicó correctamente
+docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE schedules;"
+```
+
+Notas de uso rápido (luego del deploy del backend con esta feature):
+- Pausar un día para un horario: `PUT /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
+- Quitar pausa: `DELETE /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
+- Efectos: ese día no aparecerá en disponibilidad y cualquier intento de reservar ese día será rechazado; además, al pausar se cancelan únicamente las reservas confirmadas de esa fecha para ese horario.
 ```
 
 ### 5. **DETENER SOLO EL BACKEND (PRESERVAR MYSQL)**

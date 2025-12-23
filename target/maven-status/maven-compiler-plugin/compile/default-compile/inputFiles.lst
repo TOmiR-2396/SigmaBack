@@ -1,6 +1,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AttendanceRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Role.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/RoleService.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ClosedDateRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ReservationRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/TrainingPlanDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/TrainingPlanRepository.java

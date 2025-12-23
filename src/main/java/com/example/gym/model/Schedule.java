@@ -41,6 +41,10 @@ public class Schedule {
     @Column
     private String description;
 
+    // Fechas pausadas (CSV de YYYY-MM-DD). Si una fecha está aquí, no se permiten reservas ese día.
+    @Column(name = "paused_dates", length = 1000)
+    private String pausedDates;
+
     // Reservas asociadas a este horario. Se eliminan en cascada al borrar el schedule.
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude

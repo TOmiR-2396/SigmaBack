@@ -210,6 +210,7 @@ public class TurnosController {
             List<Schedule> schedulesForDay = scheduleRepository.findByDayOfWeekAndIsActive(dayOfWeek);
             
             List<AvailableSlotDTO> availableSlots = schedulesForDay.stream()
+                .filter(schedule -> !isDatePaused(schedule, targetDate))
                 .map(schedule -> {
                     Long confirmedReservations = reservationRepository
                         .countConfirmedReservationsByScheduleAndDate(schedule.getId(), targetDate);
@@ -265,6 +266,11 @@ public class TurnosController {
             if (reservationDate.isBefore(LocalDate.now())) {
                 return ResponseEntity.badRequest().body("No se pueden hacer reservas para fechas pasadas");
             }
+
+            // Bloqueo por pausa en fecha específica
+            if (isDatePaused(schedule, reservationDate)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No se permiten reservas en esta fecha (pausada)");
+            }
             
         
             // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha (fix para reservas canceladas)
@@ -304,6 +310,100 @@ public class TurnosController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Error al hacer reserva: " + e.getMessage());
         }
+    }
+
+    // OWNER: Pausar un día específico para un schedule
+    @PutMapping("/schedule/{scheduleId}/pause")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> pauseScheduleDay(@PathVariable Long scheduleId, @RequestParam String date) {
+        try {
+            LocalDate target = LocalDate.parse(date);
+            Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
+            if (scheduleOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Schedule schedule = scheduleOpt.get();
+
+            // Validar que la fecha corresponde al día del schedule (evitar pausas incongruentes)
+            Integer dow = target.getDayOfWeek().getValue() % 7;
+            if (!dow.equals(schedule.getDayOfWeek())) {
+                return ResponseEntity.badRequest().body("La fecha no corresponde al día del horario");
+            }
+
+            // Añadir fecha a pausedDates (CSV)
+            schedule.setPausedDates(addDateToCsv(schedule.getPausedDates(), target));
+            scheduleRepository.save(schedule);
+
+            // Cancelar solo las reservas CONFIRMADAS de ese día
+            List<Reservation> toCancel = reservationRepository
+                    .findByScheduleIdAndDateAndStatus(scheduleId, target, Reservation.ReservationStatus.CONFIRMED);
+            for (Reservation r : toCancel) {
+                r.setStatus(Reservation.ReservationStatus.CANCELLED);
+                r.setCancelledAt(LocalDateTime.now());
+            }
+            if (!toCancel.isEmpty()) {
+                reservationRepository.saveAll(toCancel);
+            }
+
+            return ResponseEntity.ok("Día pausado y reservas del día canceladas");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al pausar día: " + e.getMessage());
+        }
+    }
+
+    // OWNER: Quitar pausa de un día específico
+    @DeleteMapping("/schedule/{scheduleId}/pause")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> unpauseScheduleDay(@PathVariable Long scheduleId, @RequestParam String date) {
+        try {
+            LocalDate target = LocalDate.parse(date);
+            Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
+            if (scheduleOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Schedule schedule = scheduleOpt.get();
+
+            schedule.setPausedDates(removeDateFromCsv(schedule.getPausedDates(), target));
+            scheduleRepository.save(schedule);
+            return ResponseEntity.ok("Pausa retirada para la fecha");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al quitar pausa: " + e.getMessage());
+        }
+    }
+
+    // ===== Helpers para manejo de fechas pausadas (CSV) =====
+    private boolean isDatePaused(Schedule schedule, LocalDate date) {
+        if (schedule.getPausedDates() == null || schedule.getPausedDates().isEmpty()) return false;
+        String iso = date.toString();
+        for (String token : schedule.getPausedDates().split(",")) {
+            String t = token.trim();
+            if (!t.isEmpty() && t.equals(iso)) return true;
+        }
+        return false;
+    }
+
+    private String addDateToCsv(String csv, LocalDate date) {
+        String iso = date.toString();
+        if (csv == null || csv.isEmpty()) return iso;
+        // Evitar duplicados
+        for (String token : csv.split(",")) {
+            if (iso.equals(token.trim())) return csv;
+        }
+        return csv + "," + iso;
+    }
+
+    private String removeDateFromCsv(String csv, LocalDate date) {
+        if (csv == null || csv.isEmpty()) return csv;
+        String iso = date.toString();
+        String[] parts = csv.split(",");
+        List<String> kept = new java.util.ArrayList<>();
+        for (String p : parts) {
+            String t = p.trim();
+            if (!t.isEmpty() && !t.equals(iso)) kept.add(t);
+        }
+        return String.join(",", kept);
     }
 
     // DELETE /api/turnos/reservation/{reservationId} - Cancelar reserva

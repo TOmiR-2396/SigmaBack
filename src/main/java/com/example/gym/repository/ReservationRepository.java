@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.List;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     
@@ -38,6 +39,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     // Buscar reservas por schedule y status
     List<Reservation> findByScheduleIdAndStatus(Long scheduleId, Reservation.ReservationStatus status);
+
+    // Buscar reservas por schedule, fecha y status
+    List<Reservation> findByScheduleIdAndDateAndStatus(Long scheduleId, LocalDate date, Reservation.ReservationStatus status);
 
 
 }
