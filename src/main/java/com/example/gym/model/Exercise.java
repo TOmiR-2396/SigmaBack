@@ -15,6 +15,13 @@ public class Exercise {
     @Column(length = 2000)
     private String description;
 
+    // Comentarios opcionales
+    @Column(length = 2000)
+    private String memberComment; // comentario que puede dejar el miembro
+
+    @Column(length = 2000)
+    private String trainerComment; // comentario que puede dejar el entrenador
+
 
     // Relación con el plan de entrenamiento
     @ManyToOne(fetch = FetchType.EAGER)
@@ -52,4 +59,8 @@ public class Exercise {
     public void setReps(Integer reps) { this.reps = reps; }
     public Double getWeight() { return weight; }
     public void setWeight(Double weight) { this.weight = weight; }
+    public String getMemberComment() { return memberComment; }
+    public void setMemberComment(String memberComment) { this.memberComment = memberComment; }
+    public String getTrainerComment() { return trainerComment; }
+    public void setTrainerComment(String trainerComment) { this.trainerComment = trainerComment; }
 }

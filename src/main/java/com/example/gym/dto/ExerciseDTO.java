@@ -7,6 +7,8 @@ public class ExerciseDTO {
     public Long id;
     public String name;
     public String description;
+    public String memberComment;
+    public String trainerComment;
     public String videoUrl;
     public Long trainingPlanId;
     public Integer sets;

@@ -75,6 +75,16 @@ public class ExerciseController {
         Exercise exercise = exerciseOpt.get();
         return ResponseEntity.ok(mapExerciseToDTO(exercise));
     }
+
+    // Endpoint para obtener un ejercicio por id (detalle con progreso)
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getExerciseById(@PathVariable("id") Long id, Authentication auth) {
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(id);
+        if (exerciseOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(mapExerciseToDTO(exerciseOpt.get()));
+    }
     // Endpoint para subir video y asociarlo a un ejercicio
     @PostMapping("/upload-video/{id}")
     public ResponseEntity<?> uploadVideo(@PathVariable("id") Long id,
@@ -90,15 +100,34 @@ public class ExerciseController {
         }
         Exercise exercise = exerciseOpt.get();
         try {
+            // Validaciones de tamaño y tipo
+            long maxBytes = 150L * 1024 * 1024; // 150 MB
+            if (file.getSize() > maxBytes) {
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                        .body("El video excede 150 MB. Súbelo comprimido o baja la resolución.");
+            }
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.toLowerCase().startsWith("video/")) {
+                return ResponseEntity.badRequest().body("Solo se permiten archivos de video (mp4)");
+            }
+
             String uploadDir = System.getProperty("user.dir") + java.io.File.separator + "videos";
             java.io.File dir = new java.io.File(uploadDir);
             if (!dir.exists()) dir.mkdirs();
-            String filename = "exercise_" + id + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+
+            // Nombre con timestamp (para limpieza por antigüedad)
+            String sanitizedName = file.getOriginalFilename() == null ? "video.mp4" : file.getOriginalFilename().replaceAll("\\s+", "_");
+            String filename = "exercise_" + id + "_" + System.currentTimeMillis() + "_" + sanitizedName;
             java.io.File dest = new java.io.File(dir, filename);
             file.transferTo(dest);
+
             String relativePath = "videos/" + filename;
             exercise.setVideoUrl(relativePath);
             exerciseRepository.save(exercise);
+
+            // Limpieza de videos de más de 14 días
+            cleanupOldVideos(dir.toPath(), 14);
+
             return ResponseEntity.ok(mapExerciseToDTO(exercise));
         } catch (java.io.IOException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading video: " + e.getMessage());
@@ -116,6 +145,8 @@ public class ExerciseController {
         dto.id = exercise.getId();
         dto.name = exercise.getName();
         dto.description = exercise.getDescription();
+        dto.memberComment = exercise.getMemberComment();
+        dto.trainerComment = exercise.getTrainerComment();
         dto.videoUrl = exercise.getVideoUrl();
         dto.trainingPlanId = exercise.getTrainingPlan() != null ? exercise.getTrainingPlan().getId() : null;
         dto.sets = exercise.getSets();
@@ -147,6 +178,23 @@ public class ExerciseController {
         return dto;
     }
 
+    // Elimina videos más antiguos que retentionDays en el directorio
+    private void cleanupOldVideos(java.nio.file.Path dir, int retentionDays) {
+        try {
+            java.time.Instant threshold = java.time.Instant.now().minus(java.time.Duration.ofDays(retentionDays));
+            java.nio.file.Files.list(dir)
+                .filter(p -> java.nio.file.Files.isRegularFile(p))
+                .forEach(p -> {
+                    try {
+                        java.nio.file.attribute.BasicFileAttributes attrs = java.nio.file.Files.readAttributes(p, java.nio.file.attribute.BasicFileAttributes.class);
+                        if (attrs.creationTime().toInstant().isBefore(threshold)) {
+                            java.nio.file.Files.deleteIfExists(p);
+                        }
+                    } catch (Exception ignored) { }
+                });
+        } catch (Exception ignored) { }
+    }
+
     @PostMapping("/create")
     public ResponseEntity<?> createExercise(@RequestBody ExerciseDTO exerciseDto, @RequestParam Long planId, Authentication auth) {
         User current = (User) auth.getPrincipal();
@@ -160,6 +208,8 @@ public class ExerciseController {
         Exercise exercise = new Exercise();
         exercise.setName(exerciseDto.name);
         exercise.setDescription(exerciseDto.description);
+        exercise.setMemberComment(exerciseDto.memberComment);
+        exercise.setTrainerComment(exerciseDto.trainerComment);
         exercise.setTrainingPlan(plan.get());
         exercise.setVideoUrl(exerciseDto.videoUrl);
         exercise.setSets(exerciseDto.sets);
@@ -208,6 +258,8 @@ public class ExerciseController {
         // Actualizar campos
         if (exerciseDto.name != null) exercise.setName(exerciseDto.name);
         if (exerciseDto.description != null) exercise.setDescription(exerciseDto.description);
+        if (exerciseDto.memberComment != null) exercise.setMemberComment(exerciseDto.memberComment);
+        if (exerciseDto.trainerComment != null) exercise.setTrainerComment(exerciseDto.trainerComment);
         if (exerciseDto.sets != null) exercise.setSets(exerciseDto.sets);
         if (exerciseDto.reps != null) exercise.setReps(exerciseDto.reps);
         if (exerciseDto.weight != null) exercise.setWeight(exerciseDto.weight);
@@ -235,5 +287,61 @@ public class ExerciseController {
             .collect(java.util.stream.Collectors.toList());
         
         return ResponseEntity.ok(progressList);
+    }
+
+    // PUT /api/exercises/{id}/comment/member - Miembro agrega/actualiza su comentario
+    @PutMapping("/{id}/comment/member")
+    public ResponseEntity<?> addMemberComment(@PathVariable Long id,
+                                              @RequestBody java.util.Map<String, String> body,
+                                              Authentication auth) {
+        User current = (User) auth.getPrincipal();
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(id);
+        if (exerciseOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Exercise exercise = exerciseOpt.get();
+
+        // Validación: si es MEMBER, solo puede comentar en su propio plan
+        if (current.getRole() == User.UserRole.MEMBER) {
+            TrainingPlan plan = exercise.getTrainingPlan();
+            if (plan == null || plan.getUser() == null || !current.getId().equals(plan.getUser().getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Solo puedes comentar ejercicios de tu propio plan");
+            }
+        }
+
+        String comment = body != null ? body.getOrDefault("comment", "") : "";
+        if (comment.length() > 2000) {
+            return ResponseEntity.badRequest().body("El comentario supera el máximo de 2000 caracteres");
+        }
+        exercise.setMemberComment(comment);
+        exerciseRepository.save(exercise);
+        return ResponseEntity.ok(mapExerciseToDTO(exercise));
+    }
+
+    // PUT /api/exercises/{id}/comment/trainer - Entrenador/Owner agrega/actualiza comentario del entrenador
+    @PutMapping("/{id}/comment/trainer")
+    public ResponseEntity<?> addTrainerComment(@PathVariable Long id,
+                                               @RequestBody java.util.Map<String, String> body,
+                                               Authentication auth) {
+        User current = (User) auth.getPrincipal();
+        if (!canEdit(current)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Solo TRAINER u OWNER pueden agregar comentarios de entrenador");
+        }
+
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(id);
+        if (exerciseOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Exercise exercise = exerciseOpt.get();
+
+        String comment = body != null ? body.getOrDefault("comment", "") : "";
+        if (comment.length() > 2000) {
+            return ResponseEntity.badRequest().body("El comentario supera el máximo de 2000 caracteres");
+        }
+        exercise.setTrainerComment(comment);
+        exerciseRepository.save(exercise);
+        return ResponseEntity.ok(mapExerciseToDTO(exercise));
     }
 }

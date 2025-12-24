@@ -1,153 +1,48 @@
-# ANTES DE SUBIR
+# ANTES DE SUBIR - GUÍA RÁPIDA
 
-## 🚨 PASOS MANUALES PARA APLICAR CAMBIOS CON DOCKER COMPOSE
-
-### PREREQUISITOS
-- Asegúrate de que todos los cambios estén commiteados y pusheados a GitHub
-- Tener acceso SSH al VPS: `ssh root@72.60.245.66`
-
----
-
-## � PASO 0 - BACKUP DE BASE DE DATOS (OBLIGATORIO)
-
-### **🔒 CREAR BACKUP COMPLETO DE LA BASE DE DATOS**
+## 🔒 BACKUP (SIEMPRE PRIMERO)
 ```bash
-# Conectar al VPS
 ssh root@72.60.245.66
 cd /opt/sigma/SigmaBack
-
-# Crear directorio de backups si no existe
 mkdir -p backups
 
-# Crear backup con timestamp (sin tablespaces para evitar privilegio PROCESS)
-docker exec gym-mysql mysqldump -u gymuser -pgympass \
+# Backup automático con timestamp
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+docker exec -i gym-mysql mysqldump -u gymuser -pgympass \
   --routines --triggers --single-transaction --no-tablespaces \
-  gymdb > backups/gymdb_backup_$(date +%Y%m%d_%H%M%S).sql
+  gymdb > backups/gymdb_backup_${TIMESTAMP}.sql && gzip -9 backups/gymdb_backup_${TIMESTAMP}.sql
 
-# Opcional: comprimir el backup para ahorrar espacio
-gzip -9 backups/gymdb_backup_*.sql
+# Limpiar backups viejos (mantener últimos 5)
+cd backups && ls -t gymdb_backup_*.sql.gz | tail -n +6 | xargs rm -f && cd ..
 
-# Verificar que el backup se creó correctamente
-ls -la backups/
-tail -10 backups/gymdb_backup_*.sql
-```
-
-### **📊 INFORMACIÓN DEL BACKUP**
-```bash
-# Ver tamaño del backup
-du -sh backups/gymdb_backup_*.sql
-
-# Ver contenido del backup (primeras líneas)
-head -20 backups/gymdb_backup_*.sql
-
-# Mantener solo los últimos 5 backups (limpiar antiguos)
-cd backups && ls -t gymdb_backup_*.sql | tail -n +6 | xargs rm -f && cd ..
-```
-
-### **🔄 CÓMO RESTAURAR EL BACKUP (si algo sale mal)**
-```bash
-# En caso de necesitar restaurar:
-docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb < backups/gymdb_backup_YYYYMMDD_HHMMSS.sql
+# Ver backups
+ls -lh backups/gymdb_backup_*.sql.gz
 ```
 
 ---
 
-## �📋 PROCESO COMPLETO PASO A PASO
+## 📊 MIGRACIÓN SQL (Solo si es la primera vez)
 
-### 1. **CONECTAR AL VPS**
+### **4.a - Asistencia**
 ```bash
-ssh root@72.60.245.66
-cd /opt/sigma/SigmaBack
-```
-
-### 2. **DESCARGAR ÚLTIMOS CAMBIOS**
-```bash
-git pull origin main
-```
-
-### 3. **CREAR/ACTUALIZAR ARCHIVO .env (OBLIGATORIO)**
-```bash
-# Crear o editar el archivo .env con las credenciales SMTP
-nano .env
-
-# Agregar estas líneas (reemplazar con tus credenciales reales):
-MAIL_HOST=smtp.envialosimple.email
-MAIL_PORT=587
-MAIL_USERNAME=qZqyMqW4mhtpqYePb39c1af5@sigmagym.com.ar
-MAIL_PASSWORD=K6ReDDE3vyLcyz9ds1bGPGg5F5WLMC28
-MAIL_FROM=no-reply@sigmagym.com.ar
-APP_FRONTEND_RESET_URL=https://TU_DOMINIO_FRONTEND/reset-password?token=
-
-# Guardar: Ctrl+O, Enter, Ctrl+X
-
-# Verificar que se creó correctamente
-cat .env
-```
-
-**⚠️ IMPORTANTE:** 
-- Reemplazá `TU_DOMINIO_FRONTEND` con la URL real de tu frontend
-- Verificá que `MAIL_USERNAME` y `MAIL_PASSWORD` sean correctos
-- El archivo `.env` NO se sube a GitHub (está en .gitignore)
-
-### 4. **APLICAR MIGRACIÓN DE ASISTENCIA (SOLO LA PRIMERA VEZ)**
-```bash
-# Verificar si las columnas ya existen
-docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE reservations;"
-
-# Si NO ves las columnas 'attended' y 'attended_at', ejecutar:
 docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
-ALTER TABLE reservations 
-  ADD COLUMN attended TINYINT(1) NOT NULL DEFAULT 0 
-  COMMENT 'Indica si el usuario asistió (0=No, 1=Sí)';
-
-ALTER TABLE reservations 
-  ADD COLUMN attended_at DATETIME NULL 
-  COMMENT 'Fecha y hora cuando se marcó la asistencia';
-
-CREATE INDEX idx_reservations_attended_date 
-  ON reservations(attended, date);
+ALTER TABLE reservations ADD COLUMN attended TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE reservations ADD COLUMN attended_at DATETIME NULL;
+CREATE INDEX idx_reservations_attended_date ON reservations(attended, date);
 EOF
-
-# Verificar que se aplicó correctamente
-docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE reservations;"
-
-### 4.b **APLICAR MIGRACIÓN DE PAUSAS POR FECHA (SOLO LA PRIMERA VEZ)**
-Para habilitar la pausa por fecha de un horario, se agregó el campo `paused_dates` en la tabla `schedules`. Esta migración se corre una sola vez.
-
-```bash
-# Verificar si la columna ya existe (compatible MySQL 5.7/8.0)
-docker exec -it gym-mysql mysql -u gymuser -pgympass -N -s -e \
-  "SELECT COUNT(*) FROM information_schema.COLUMNS \
-     WHERE TABLE_SCHEMA='gymdb' AND TABLE_NAME='schedules' AND COLUMN_NAME='paused_dates';"
-
-# Si el resultado fue 0, ejecutar el ALTER:
-docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
-ALTER TABLE schedules 
-  ADD COLUMN paused_dates VARCHAR(1000) NULL 
-  COMMENT 'Fechas pausadas CSV YYYY-MM-DD';
-EOF
-
-# Verificar que se aplicó correctamente
-docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE schedules;"
 ```
 
-Notas de uso rápido (luego del deploy del backend con esta feature):
-- Pausar un día para un horario: `PUT /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
-- Quitar pausa: `DELETE /api/turnos/schedule/{scheduleId}/pause?date=YYYY-MM-DD`
-- Efectos: ese día no aparecerá en disponibilidad y cualquier intento de reservar ese día será rechazado; además, al pausar se cancelan únicamente las reservas confirmadas de esa fecha para ese horario.
-
-### 4.c **APLICAR MIGRACIÓN DE PROGRESIÓN DE EJERCICIOS (SOLO LA PRIMERA VEZ)**
-Se agregó la tabla `exercise_progress` para guardar el histórico de cambios en los ejercicios y calcular porcentaje de mejora.
-
+### **4.b - Pausas por fecha**
 ```bash
-# Verificar si la tabla ya existe
-docker exec -it gym-mysql mysql -u gymuser -pgympass -N -s -e \
-  "SELECT COUNT(*) FROM information_schema.TABLES \
-     WHERE TABLE_SCHEMA='gymdb' AND TABLE_NAME='exercise_progress';"
-
-# Si el resultado fue 0, ejecutar el CREATE TABLE:
 docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
-CREATE TABLE exercise_progress (
+ALTER TABLE schedules ADD COLUMN paused_dates VARCHAR(1000) NULL COMMENT 'CSV de fechas pausadas YYYY-MM-DD';
+EOF
+```
+
+### **4.c - Progresión de ejercicios (NUEVA)**
+```bash
+docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
+CREATE TABLE IF NOT EXISTS exercise_progress (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   exercise_id BIGINT NOT NULL,
   weight DOUBLE NOT NULL,
@@ -155,178 +50,50 @@ CREATE TABLE exercise_progress (
   reps INT,
   recorded_at DATETIME NOT NULL,
   notes VARCHAR(500) NULL,
-  CONSTRAINT fk_exercise_id FOREIGN KEY (exercise_id) 
-    REFERENCES ejercicios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_exercise_id FOREIGN KEY (exercise_id) REFERENCES ejercicios(id) ON DELETE CASCADE,
   INDEX idx_exercise_recorded (exercise_id, recorded_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 EOF
-
-# Verificar que se creó correctamente
-docker exec -it gym-mysql mysql -u gymuser -pgympass gymdb -e "DESCRIBE exercise_progress;"
 ```
 
-Notas de uso (luego del deploy del backend con esta feature):
-- El histórico se captura automáticamente al actualizar un ejercicio
-- GET `/api/exercises/{id}` devuelve: `weight`, `previousWeight`, `progressPercentage`, `progressHistory`
-- GET `/api/exercises/{id}/progress` devuelve todo el histórico completo
-- PUT `/api/exercises/{id}` guarda un registro de progreso antes de actualizar los valores
-```
-
-### 5. **DETENER SOLO EL BACKEND (PRESERVAR MYSQL)**
+### **4.d - Comentarios en ejercicios (miembro / entrenador)**
 ```bash
-docker-compose stop backend
-```
-
-### 6. **ELIMINAR CONTAINER BACKEND ANTERIOR**
-```bash
-docker rm gym-backend
-
-# Si ves: "container is running" entonces primero detenelo o fuerza la eliminación
-docker stop gym-backend || true
-docker rm -f gym-backend
-```
-
-### 7. **RECONSTRUIR LA IMAGEN BACKEND**
-```bash
-docker-compose build --no-cache backend
-```
-
-### 8. **INICIAR EL BACKEND ACTUALIZADO**
-```bash
-# Opción A: Usar compose (RECOMENDADO - lee el .env automáticamente)
-docker-compose up -d backend
-
-# Opción B: Si prefieres docker run directo (debes pasar el archivo .env)
-docker run -d \
-  --name gym-backend \
-  --network sigmaback_gym-network \
-  -p 127.0.0.1:8080:8080 \
-  --env-file /opt/sigma/SigmaBack/.env \
-  -e SPRING_DATASOURCE_URL="jdbc:mysql://gym-mysql:3306/gymdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
-  -e SPRING_DATASOURCE_USERNAME="gymuser" \
-  -e SPRING_DATASOURCE_PASSWORD="gympass" \
-  -e SPRING_PROFILES_ACTIVE="prod" \
-  -e PORT="8080" \
-  -e JWT_SECRET="Z3xO1raNs7SJxocFht4wpds4AYoo7Q9QbRMaOST6H9dtq7vzKrh/+eoB6c036Du6Mr2tlv0w2joGUetlHu6Hxg==" \
-  -e JWT_EXPIRATION="86400000" \
-  -e JAVA_OPTS="-Xms256m -Xmx512m" \
-  --restart unless-stopped \
-  sigmaback-backend
-```
-
-### 9. **VERIFICAR QUE TODO FUNCIONE**
-```bash
-# Ver estado de containers
-docker ps
-
-# Ver logs del backend (últimas 20 líneas)
-docker logs gym-backend --tail=20
-
-# Ver logs en tiempo real (Ctrl+C para salir)
-docker logs gym-backend -f
-
-# Probar endpoint de salud (si está configurado)
-curl http://127.0.0.1:8080/api/auth/login
-
-# Probar envío de email (olvidé contraseña)
-# Desde el frontend o con curl al endpoint /api/auth/forgot-password
+docker exec -i gym-mysql mysql -u gymuser -pgympass gymdb << 'EOF'
+ALTER TABLE ejercicios 
+  ADD COLUMN member_comment VARCHAR(2000) NULL,
+  ADD COLUMN trainer_comment VARCHAR(2000) NULL;
+EOF
 ```
 
 ---
 
-## ⚠️ SI HAY PROBLEMAS DE CONEXIÓN MYSQL
+## 🚀 DEPLOY BACKEND
 
-### **Problema común: "UnknownHostException: mysql"**
-
-**Solución - Recrear backend con URL correcta:**
+En local:
 ```bash
-docker stop gym-backend
-docker rm gym-backend
-
-# Asegúrate de que el archivo .env existe
-cat /opt/sigma/SigmaBack/.env
-
-# Levantar con compose (lee .env automáticamente)
-docker-compose up -d backend
+./deploy.sh
+scp deploy_*.tar.gz root@72.60.245.66:/tmp/
 ```
 
----
-
-## 🔍 COMANDOS DE DIAGNÓSTICO
-
-### **Ver estado general:**
+En servidor:
 ```bash
-docker ps
-docker-compose ps
+cd /tmp && tar -xzf deploy_*.tar.gz && cd deploy_* && ./install-fix.sh
 ```
 
-### **Ver logs detallados:**
-```bash
-# Backend
-docker logs gym-backend --tail=50
-
-# MySQL
-docker logs gym-mysql --tail=20
-```
-
-### **Conectar a MySQL directamente:**
-```bash
-docker exec -it gym-mysql mysql -u gymuser -p
-# Contraseña: gympass
-```
-
-### **Ver redes de Docker:**
-```bash
-docker network ls
-docker network inspect sigmaback_gym-network
-```
-
----
-
-## 🚨 EN CASO DE EMERGENCIA - RESTART COMPLETO
-
-**SOLO si todo está roto y necesitas empezar de cero:**
-```bash
-# CUIDADO: Esto preserva los datos de MySQL
-docker-compose down
-docker-compose up -d
-```
-
----
-
-## ✅ VERIFICACIÓN FINAL
-
-### **Comprobar que la aplicación funciona:**
-1. `docker ps` - Ambos containers corriendo
-2. `docker logs gym-backend --tail=10` - Sin errores
-3. Probar endpoint: `curl http://127.0.0.1:8080/api/auth/test` o similar
-
-### **Ver debug logs en acción:**
+Ver logs:
 ```bash
 docker logs gym-backend -f
-# Hacer una reserva desde la app para ver los logs de debug
 ```
 
 ---
 
-## 📝 NOTAS IMPORTANTES
+## ✅ ENDPOINTS NUEVOS
 
-- 🔥 **SIEMPRE hacer backup ANTES de cualquier cambio** - Es obligatorio, no opcional
-- 📧 **Crear el archivo .env con credenciales SMTP** - Sin este archivo, el backend no levanta
-- ⚠️ **NUNCA elimines el container gym-mysql** - Perderás todos los datos
-- ✅ **Siempre usa `docker-compose stop backend`** - No `docker-compose down`
-- 🔍 **Los debug logs aparecen cuando haces reservas** - Busca líneas con `[DEBUG]`
-- 🚀 **Si cambias código, siempre usa `--no-cache`** - Para asegurar build limpio
-- 💾 **Los backups se guardan en `/opt/sigma/SigmaBack/backups/`** - Con timestamp automático
-- 🗂️ **Se mantienen los últimos 5 backups** - Los antiguos se eliminan automáticamente
-- 🔐 **El .env NO se sube a GitHub** - Está en .gitignore por seguridad
-- 📧 **Probá el envío de emails** - Usa "olvidé contraseña" para validar SMTP
+**Progresión de ejercicios:**
+- `GET /api/exercises/{id}` → devuelve `weight`, `previousWeight`, `progressPercentage`, `progressHistory`
+- `GET /api/exercises/{id}/progress` → histórico completo
+- `PUT /api/exercises/{id}` → actualiza y guarda progreso automáticamente
 
----
-
-## 🆘 CONTACTOS DE EMERGENCIA
-
-Si algo sale mal:
-1. Revisar logs: `docker logs gym-backend --tail=50`
-2. Verificar red: `docker network inspect sigmaback_gym-network`
-3. Verificar MySQL: `docker exec -it gym-mysql mysql -u gymuser -p`
+**Pausar día completo:**
+- `PUT /api/turnos/pause-day?date=YYYY-MM-DD` → pausa todos los horarios
+- `DELETE /api/turnos/pause-day?date=YYYY-MM-DD` → despausa todos
