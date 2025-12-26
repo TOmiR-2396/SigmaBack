@@ -9,7 +9,9 @@ com/example/gym/repository/UserRepository.class
 com/example/gym/model/Subscription$SubscriptionBuilder.class
 com/example/gym/service/MembershipExpirationService.class
 com/example/gym/GymApplication.class
+com/example/gym/model/TrainingPlan$PlanStatus.class
 com/example/gym/model/Exercise.class
+com/example/gym/service/TrainingPlanService.class
 com/example/gym/security/JwtAuthenticationFilter.class
 com/example/gym/repository/RoleRepository.class
 com/example/gym/dto/MembershipInfoDTO.class
@@ -28,6 +30,7 @@ com/example/gym/repository/MembershipPlanRepository.class
 com/example/gym/model/MembershipPlan$MembershipPlanBuilder.class
 com/example/gym/model/User.class
 com/example/gym/config/SecurityConfig.class
+com/example/gym/service/TurnosService.class
 com/example/gym/dto/AssignTemplateRequest.class
 com/example/gym/model/Schedule$ScheduleBuilder.class
 com/example/gym/controller/MembershipExpirationController.class
@@ -37,6 +40,7 @@ com/example/gym/dto/AvailableSlotDTO.class
 com/example/gym/service/PasswordResetService.class
 com/example/gym/dto/ReservationDTO.class
 com/example/gym/dto/AttendanceRequest.class
+com/example/gym/repository/TrainingPlanHistoryRepository.class
 com/example/gym/model/Reservation.class
 com/example/gym/model/Subscription.class
 com/example/gym/model/Attendance.class
@@ -51,7 +55,9 @@ com/example/gym/repository/TrainingPlanRepository.class
 com/example/gym/config/WebConfig.class
 com/example/gym/model/TrainingPlan.class
 com/example/gym/repository/ReservationRepository.class
+com/example/gym/service/ExerciseService.class
 com/example/gym/repository/ScheduleRepository.class
+com/example/gym/model/TrainingPlanHistory.class
 com/example/gym/dto/ExerciseDTO.class
 com/example/gym/service/EmailService.class
 com/example/gym/dto/MembershipPlanDTO.class

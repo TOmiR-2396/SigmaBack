@@ -1,0 +1,329 @@
+{
+  "info": {
+    "name": "SigmaGym - Exercise Testing",
+    "description": "Collection para probar endpoints de ejercicios con upload de videos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth - Login Member",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"member@gym.com\",\n  \"password\": \"member123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth - Login Trainer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"trainer@gym.com\",\n  \"password\": \"trainer123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. GET - Obtener todos los ejercicios",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/exercises",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. GET - Obtener ejercicios por plan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/by-plan/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "by-plan", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. GET - Obtener ejercicio por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. POST - Crear ejercicio (TRAINER/OWNER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Flexiones\",\n  \"description\": \"Ejercicio de pecho y brazos\",\n  \"sets\": 3,\n  \"reps\": 10,\n  \"weight\": 0,\n  \"memberComment\": \"\",\n  \"trainerComment\": \"\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/create?planId=1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "create"],
+          "query": [
+            {
+              "key": "planId",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. POST - Subir video (MEMBER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/path/to/video.mp4"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/upload-video/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "upload-video", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. POST - Subir video (TRAINER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{trainerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/path/to/video.mp4"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/upload-video/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "upload-video", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9. PUT - Actualizar ejercicio",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Flexiones (actualizado)\",\n  \"description\": \"Ejercicio de pecho y brazos\",\n  \"sets\": 4,\n  \"reps\": 12,\n  \"weight\": 5,\n  \"memberComment\": \"Me siento fuerte\",\n  \"trainerComment\": \"Buen progreso\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10. GET - Obtener progresión completa",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/1/progress",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "1", "progress"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11. PUT - Miembro agrega comentario",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"comment\": \"Este ejercicio me está ayudando mucho con la espalda\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/1/comment/member",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "1", "comment", "member"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12. PUT - Entrenador agrega comentario",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{trainerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"comment\": \"Muy bien el trabajo, aumentar peso en próxima sesión\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/exercises/1/comment/trainer",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "exercises", "1", "comment", "trainer"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "memberToken",
+      "value": ""
+    },
+    {
+      "key": "trainerToken",
+      "value": ""
+    }
+  ]
+}

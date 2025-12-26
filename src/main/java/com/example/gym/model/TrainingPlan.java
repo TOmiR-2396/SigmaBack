@@ -1,6 +1,8 @@
 package com.example.gym.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -24,11 +26,24 @@ public class TrainingPlan {
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
+    @Column(nullable = false)
+    private LocalDate startDate;
+
+    @Column(nullable = true)
+    private LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PlanStatus status = PlanStatus.ACTIVE;
 
     // Relación con ejercicios
     @OneToMany(mappedBy = "trainingPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Exercise> exercises;
+
+    public enum PlanStatus {
+        ACTIVE, PAUSED, ARCHIVED, COMPLETED
+    }
 
     // Getters y setters
     public Long getId() { return id; }
@@ -43,4 +58,10 @@ public class TrainingPlan {
     public void setIsTemplate(Boolean isTemplate) { this.isTemplate = isTemplate; }
     public List<Exercise> getExercises() { return exercises; }
     public void setExercises(List<Exercise> exercises) { this.exercises = exercises; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public PlanStatus getStatus() { return status; }
+    public void setStatus(PlanStatus status) { this.status = status; }
 }
