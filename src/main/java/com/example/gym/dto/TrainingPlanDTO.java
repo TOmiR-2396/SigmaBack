@@ -1,11 +1,14 @@
 package com.example.gym.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public class TrainingPlanDTO {
     public Long id;
     public String name;
     public String description;
+    public LocalDate startDate;
+    public LocalDate endDate;
     public Long userId;
     public Boolean isTemplate;
     public List<ExerciseDTO> exercises;
@@ -36,6 +39,22 @@ public class TrainingPlanDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public Long getUserId() {

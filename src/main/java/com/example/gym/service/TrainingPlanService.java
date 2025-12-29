@@ -7,6 +7,7 @@ import com.example.gym.model.TrainingPlan;
 import com.example.gym.model.TrainingPlanHistory;
 import com.example.gym.model.User;
 import com.example.gym.repository.ExerciseRepository;
+import com.example.gym.repository.ExerciseProgressRepository;
 import com.example.gym.repository.TrainingPlanRepository;
 import com.example.gym.repository.TrainingPlanHistoryRepository;
 import com.example.gym.repository.UserRepository;
@@ -34,6 +35,8 @@ public class TrainingPlanService {
     private UserRepository userRepository;
     @Autowired
     private ExerciseRepository exerciseRepository;
+    @Autowired
+    private ExerciseProgressRepository progressRepository;
     @Autowired
     private TrainingPlanHistoryRepository historyRepository;
     @Autowired
@@ -163,6 +166,11 @@ public class TrainingPlanService {
         plan.setDescription(planDto.description != null ? planDto.description.trim() : "");
         plan.setIsTemplate(false);
         plan.setUser(member.get());
+        // Si no viene fecha de inicio, usar hoy para evitar NOT NULL
+        plan.setStartDate(planDto.startDate != null ? planDto.startDate : java.time.LocalDate.now());
+        if (planDto.endDate != null) {
+            plan.setEndDate(planDto.endDate);
+        }
         
         return planRepository.save(plan);
     }
@@ -223,9 +231,48 @@ public class TrainingPlanService {
      * Eliminar un plan
      */
     public void deletePlan(Long planId) {
-        if (!planRepository.existsById(planId)) {
+        Optional<TrainingPlan> planOpt = planRepository.findById(planId);
+        if (planOpt.isEmpty()) {
             throw new IllegalArgumentException("Plan no encontrado");
         }
+
+        // Limpiar ejercicios asociados (progreso y archivos de video) antes de borrar el plan
+        List<Exercise> exercises = exerciseRepository.findByTrainingPlanId(planId);
+        for (Exercise ex : exercises) {
+            try {
+                // Borrar archivo de video si existe
+                String videoUrl = ex.getVideoUrl();
+                if (videoUrl != null && !videoUrl.isBlank()) {
+                    java.io.File f = new java.io.File(System.getProperty("user.dir"), videoUrl);
+                    if (!f.isAbsolute()) {
+                        // Si la URL es relativa como "videos/archivo.mp4"
+                        f = new java.io.File(System.getProperty("user.dir") + java.io.File.separator + videoUrl);
+                    }
+                    if (f.exists()) {
+                        boolean deleted = f.delete();
+                        if (!deleted) {
+                            logger.warn("No se pudo eliminar el archivo de video: {}", f.getAbsolutePath());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Error eliminando archivo de video del ejercicio {}: {}", ex.getId(), e.getMessage());
+            }
+
+            // Borrar progreso del ejercicio
+            try {
+                progressRepository.deleteByExerciseId(ex.getId());
+            } catch (Exception e) {
+                logger.warn("Error eliminando progreso del ejercicio {}: {}", ex.getId(), e.getMessage());
+            }
+        }
+
+        // Borrar ejercicios explícitamente (además de cascade por seguridad)
+        if (!exercises.isEmpty()) {
+            exerciseRepository.deleteAll(exercises);
+        }
+
+        // Finalmente borrar el plan
         planRepository.deleteById(planId);
     }
     

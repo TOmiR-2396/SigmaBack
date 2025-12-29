@@ -16,4 +16,7 @@ public interface ExerciseProgressRepository extends JpaRepository<ExerciseProgre
     // Obtener el último registro de progreso de un ejercicio
     @Query(value = "SELECT * FROM exercise_progress WHERE exercise_id = :exerciseId ORDER BY recorded_at DESC LIMIT 1", nativeQuery = true)
     ExerciseProgress findLatestByExerciseId(@Param("exerciseId") Long exerciseId);
+
+    // Eliminar todo el progreso de un ejercicio
+    void deleteByExerciseId(Long exerciseId);
 }

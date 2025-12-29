@@ -148,4 +148,19 @@ public class ExerciseController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
     }
+
+    // DELETE /api/exercises/{id} - Eliminar ejercicio individual (borrado duro)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteExercise(@PathVariable Long id, Authentication auth) {
+        User current = (User) auth.getPrincipal();
+        try {
+            exerciseService.deleteExercise(id, current);
+            return ResponseEntity.ok("Exercise deleted");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error deleting exercise: " + e.getMessage());
+        }
+    }
 }

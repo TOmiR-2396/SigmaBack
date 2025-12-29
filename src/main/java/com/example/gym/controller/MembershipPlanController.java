@@ -22,6 +22,24 @@ import java.util.Map;
 public class MembershipPlanController {
 
     private final MembershipService membershipService;
+
+    /**
+     * COMPATIBILIDAD: Endpoint antiguo para crear plan
+     * Redirige a POST /api/memberships/plans
+     */
+    @PostMapping(value = {"/plans/create", "/create"})
+    public ResponseEntity<?> createPlanLegacy(
+            @RequestBody MembershipPlanDTO planDto,
+            Authentication auth) {
+        try {
+            User currentUser = (User) auth.getPrincipal();
+            MembershipPlanDTO created = membershipService.createPlan(planDto, currentUser);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // Obtener membresía activa del usuario
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getMembershipByUserId(@PathVariable("userId") Long userId) {

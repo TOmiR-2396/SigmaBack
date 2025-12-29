@@ -290,6 +290,8 @@ public class TrainingPlanController {
         dto.id = plan.getId();
         dto.name = plan.getName();
         dto.description = plan.getDescription();
+        dto.startDate = plan.getStartDate();
+        dto.endDate = plan.getEndDate();
         dto.userId = plan.getUser() != null ? plan.getUser().getId() : null;
         dto.isTemplate = plan.getIsTemplate();
         return dto;

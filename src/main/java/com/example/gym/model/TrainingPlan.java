@@ -26,7 +26,8 @@ public class TrainingPlan {
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
-    @Column(nullable = false)
+    // startDate es opcional; si no viene se setea a la fecha de creación
+    @Column(nullable = true)
     private LocalDate startDate;
 
     @Column(nullable = true)

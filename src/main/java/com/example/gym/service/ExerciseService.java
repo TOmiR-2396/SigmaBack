@@ -325,6 +325,45 @@ public class ExerciseService {
     }
 
     /**
+     * Eliminar ejercicio individual (borrado duro) con limpieza de video y progreso
+     */
+    public void deleteExercise(Long id, User currentUser) {
+        if (!canEdit(currentUser)) {
+            throw new IllegalArgumentException("Solo TRAINER u OWNER pueden eliminar ejercicios");
+        }
+
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(id);
+        if (exerciseOpt.isEmpty()) {
+            throw new IllegalArgumentException("Ejercicio no encontrado");
+        }
+
+        Exercise ex = exerciseOpt.get();
+
+        // Borrar archivo de video si existe
+        try {
+            String videoUrl = ex.getVideoUrl();
+            if (videoUrl != null && !videoUrl.isBlank()) {
+                java.io.File f = new java.io.File(System.getProperty("user.dir"), videoUrl);
+                if (!f.isAbsolute()) {
+                    f = new java.io.File(System.getProperty("user.dir") + java.io.File.separator + videoUrl);
+                }
+                if (f.exists()) {
+                    boolean deleted = f.delete();
+                    if (!deleted) {
+                        // Log local: no tenemos logger aquí, mantener silencioso
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+
+        // Borrar progreso del ejercicio
+        progressRepository.deleteByExerciseId(id);
+
+        // Borrar el ejercicio
+        exerciseRepository.deleteById(id);
+    }
+
+    /**
      * Elimina videos más antiguos que retentionDays en el directorio
      */
     private void cleanupOldVideos(Path dir, int retentionDays) {
