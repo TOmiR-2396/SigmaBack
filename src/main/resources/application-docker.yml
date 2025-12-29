@@ -32,8 +32,10 @@ spring:
 # JWT Configuration ya está configurado arriba
 
 # Server configuration
+# En Docker, PORT se establece a 8080 desde docker-compose.yml (variable de entorno PORT=8080)
+# Si quieres cambiar, sobrescribe: PORT=9000 en docker-compose.yml
 server:
-  port: 8080
+  port: ${PORT:8081}
 
 # Logging configuration
 logging:

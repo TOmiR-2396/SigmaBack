@@ -4,7 +4,7 @@ services:
     container_name: gym-backend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"   # solo loopback (no público)
+      - "127.0.0.1:8080:8081"   # solo loopback (no público)
     # Carga opcional de variables desde archivo .env (no se commitea)
     env_file: .env
     environment:

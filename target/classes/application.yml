@@ -1,6 +1,32 @@
+# ==============================
+# Guía rápida: Perfiles y credenciales
+#
+# Cambiar perfil:
+#   export SPRING_PROFILES_ACTIVE=dev   # desarrollo (H2, puerto 8081)
+#   export SPRING_PROFILES_ACTIVE=prod  # producción (MySQL)
+#
+# Credenciales MySQL (perfil prod):
+#   export DB_HOST=localhost
+#   export DB_PORT=3307
+#   export DB_NAME=gymdb
+#   export DB_USER=gymuser
+#   export DB_PASSWORD=gympass
+#   # En Docker podés usar directamente:
+#   export SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/gymdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+#   export SPRING_DATASOURCE_USERNAME=gymuser
+#   export SPRING_DATASOURCE_PASSWORD=gympass
+#
+# Puerto del servidor:
+#   export PORT=8081   # local por defecto
+#   # En Docker se fuerza a 8080 dentro del contenedor y se publica en 127.0.0.1:8080
+#
+# JWT secreto:
+#   export JWT_SECRET="<tu-secreto>"  # sobreescribe jwt.secret
+# ==============================
+
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:prod}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   mail:
     host: ${MAIL_HOST:smtp.envialosimple.email}
     port: ${MAIL_PORT:587}
@@ -17,6 +43,7 @@ spring:
           protocol: smtp
 
 jwt:
+  # Podés sobreescribirlo con la variable de entorno JWT_SECRET
   secret: "YjFhMmMzZDRlNWY2ZzdoOGk5ajBrMWwybTNuNG81cDZxN3I4czl0MHUxdjJ3M3g0eTV6NmE3YjhjOWQwZTFmMmczaDRpNWo2azdsOG05bjBvMXAy"
 
 # Dirección remitente por defecto (opcional). También puede venir de env: MAIL_FROM
@@ -28,7 +55,9 @@ app:
   frontend:
     reset-url: ${APP_FRONTEND_RESET_URL:http://localhost:5173/reset-password?token=}
 
+# Separación de documentos YAML por perfil
 ---
+# Perfil DEV (H2 en memoria). Ideal para desarrollo rápido sin MySQL.
 spring:
   config:
     activate:
@@ -61,6 +90,7 @@ spring:
       WRITE_DATES_AS_TIMESTAMPS: false
 
 ---
+# Perfil PROD (MySQL). Usá variables DB_* o SPRING_DATASOURCE_* en Docker.
 spring:
   config:
     activate:
@@ -68,6 +98,8 @@ spring:
   
   # MySQL para producción
   datasource:
+    # Configurable por env: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+    # Alternativa en Docker: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:gymdb}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USER:gymuser}
     password: ${DB_PASSWORD:gympass}
@@ -94,8 +126,10 @@ spring:
 #      password: admin
 #      roles: OWNER
 
-# cambie el puerto a 8081 para evitar conflictos con otros servicios como docker que corren en 8080 y si lo mato al puerto se me cae todo
 server:
+  # Puerto configurable por env: PORT
+  # Por defecto: 8081 en local (dev), 8080 en Docker (prod)
+  # Sobrescribe con: PORT=9000 ./mvnw spring-boot:run
   port: ${PORT:8081}
 
 logging:

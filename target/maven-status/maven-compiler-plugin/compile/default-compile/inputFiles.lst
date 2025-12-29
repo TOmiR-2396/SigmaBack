@@ -6,8 +6,10 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Reservation.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/MembershipPlanController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/security/JwtUtil.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/AnalyticsService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/PasswordResetTokenRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/ExerciseDTO.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AnalyticsDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/MembershipPlanDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AvailableSlotDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ScheduleRepository.java
@@ -15,11 +17,13 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/ExerciseController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Exercise.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ExerciseProgressRepository.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/MembershipService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/ExerciseService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/ExerciseRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/UserRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/PasswordResetService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/GymApplication.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/AnalyticsController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/MembershipExpirationService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/EmailService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/UserController.java
@@ -40,6 +44,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/TrainingPlanHistory.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/SecurityConfig.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/RoleRepository.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/DataInitializer.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/MembershipPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/TrainingPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TrainingPlanController.java

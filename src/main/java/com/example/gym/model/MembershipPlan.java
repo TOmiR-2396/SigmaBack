@@ -50,7 +50,7 @@ public class MembershipPlan {
 
         @NotNull
         @Min(1)
-        @Max(5)
+        @Max(7)
         @Column(nullable = false)
         private Integer daysPerWeek;
 
