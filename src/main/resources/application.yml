@@ -23,6 +23,13 @@ jwt:
 mail:
   from: ${MAIL_FROM:}
 
+multitenancy:
+  header: ${TENANT_HEADER:X-Tenant-ID}
+  default-tenant: ${TENANT_DEFAULT:}
+  required: ${TENANT_REQUIRED:true}
+  switches:
+    cache-seconds: ${TENANT_SWITCH_CACHE:60}
+
 ## Credenciales de Mercado Pago (SIEMPRE usar variables de entorno)
 ## NUNCA commitear credenciales reales a git
 mercadopago:

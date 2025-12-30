@@ -1,16 +1,19 @@
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "password_reset_tokens")
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PasswordResetToken {
+public class PasswordResetToken extends TenantEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

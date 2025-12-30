@@ -1,17 +1,22 @@
     // ...existing code...
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_user_tenant_email", columnNames = {"tenant_id", "email"})
+})
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class User extends TenantEntity {
     public Long getId() {
         return id;
     }
@@ -33,7 +38,7 @@ public class User {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String email;
 
     private String phone;

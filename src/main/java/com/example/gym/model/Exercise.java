@@ -1,10 +1,13 @@
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "ejercicios")
-public class Exercise {
+@Filter(name = "tenantFilter")
+public class Exercise extends TenantEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

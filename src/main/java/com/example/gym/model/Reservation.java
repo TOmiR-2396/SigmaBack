@@ -1,9 +1,11 @@
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
 import jakarta.persistence.Index;
 import jakarta.persistence.UniqueConstraint;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -13,19 +15,20 @@ import java.time.LocalDateTime;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_res_unique_user_schedule_date_status",
-            columnNames = {"user_id", "schedule_id", "date", "status"}
+            columnNames = {"tenant_id", "user_id", "schedule_id", "date", "status"}
         )
     },
     indexes = {
-        @Index(name = "idx_res_schedule_date_status", columnList = "schedule_id,date,status"),
-        @Index(name = "idx_res_user_schedule_date_status", columnList = "user_id,schedule_id,date,status")
+        @Index(name = "idx_res_schedule_date_status", columnList = "tenant_id,schedule_id,date,status"),
+        @Index(name = "idx_res_user_schedule_date_status", columnList = "tenant_id,user_id,schedule_id,date,status")
     }
 )
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Reservation {
+public class Reservation extends TenantEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

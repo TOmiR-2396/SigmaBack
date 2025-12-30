@@ -1,19 +1,22 @@
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 // Import Member class if it exists in the same package or another package
 import com.example.gym.model.User;
 
 @Entity
 @Table(name = "attendances")
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Attendance {
+public class Attendance extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

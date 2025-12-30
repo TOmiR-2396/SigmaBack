@@ -1,17 +1,20 @@
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "subscriptions")
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Subscription {
+public class Subscription extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

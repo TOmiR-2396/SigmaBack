@@ -1,6 +1,7 @@
 package com.example.gym.config;
 
 import com.example.gym.security.JwtAuthenticationFilter;
+import com.example.gym.tenant.TenantRequestFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    private TenantRequestFilter tenantRequestFilter;
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE) // nos aseguramos que esta cadena gana
@@ -60,6 +64,7 @@ public class SecurityConfig {
                 })
             );
 
+        http.addFilterBefore(tenantRequestFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

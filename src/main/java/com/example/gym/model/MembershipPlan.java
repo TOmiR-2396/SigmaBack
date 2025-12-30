@@ -1,20 +1,24 @@
-
 package com.example.gym.model;
 
+import com.example.gym.tenant.TenantEntity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 @Entity
-@Table(name = "membership_plans")
+@Table(name = "membership_plans", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_membership_plan_name", columnNames = {"tenant_id", "name"})
+})
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MembershipPlan {
+public class MembershipPlan extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,7 +33,7 @@ public class MembershipPlan {
     }
 
     @NotBlank
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @Positive
