@@ -120,6 +120,13 @@
       <version>5.0.0</version>
       <scope>provided</scope>
     </dependency>
+
+    <!-- Mercado Pago Java SDK -->
+    <dependency>
+      <groupId>com.mercadopago</groupId>
+      <artifactId>sdk-java</artifactId>
+      <version>2.1.9</version>
+    </dependency>
   </dependencies>
 
   <build>
