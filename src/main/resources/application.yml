@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:prod}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   mail:
     host: ${MAIL_HOST:smtp.envialosimple.email}
     port: ${MAIL_PORT:587}
@@ -25,8 +25,8 @@ mail:
 
 multitenancy:
   header: ${TENANT_HEADER:X-Tenant-ID}
-  default-tenant: ${TENANT_DEFAULT:}
-  required: ${TENANT_REQUIRED:true}
+  default-tenant: ${TENANT_DEFAULT:sigma-gym}
+  required: ${TENANT_REQUIRED:false}
   switches:
     cache-seconds: ${TENANT_SWITCH_CACHE:60}
 

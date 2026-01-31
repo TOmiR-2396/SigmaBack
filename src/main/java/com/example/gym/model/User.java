@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -53,6 +54,21 @@ public class User extends TenantEntity {
     @Column(nullable = false)
     @Builder.Default
     private UserStatus status = UserStatus.INACTIVE;
+
+    @Column
+    private LocalDateTime lastLoginAt;
+
+    @Column
+    private LocalDateTime deactivatedAt;
+
+    @Column
+    private Long deactivatedByUserId;
+
+    @Column
+    private String deactivatedByRole;
+
+    @Column
+    private String deactivationReason;
 
     @Column(nullable = false)
     private String password;

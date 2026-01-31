@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.List;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     
@@ -29,6 +28,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Verificar si un usuario ya tiene reserva CONFIRMADA para un horario y fecha específicos (fix para reservas canceladas)
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.schedule.id = :scheduleId AND r.date = :date AND r.status = 'CONFIRMED'")
     Long countConfirmedByUserAndScheduleAndDate(@Param("userId") Long userId, @Param("scheduleId") Long scheduleId, @Param("date") LocalDate date);
+
+    // Verificar si el staff (TRAINER/OWNER) canceló ese mismo turno
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.schedule.id = :scheduleId AND r.date = :date AND r.status = 'CANCELLED' AND r.cancelledByUserId IS NOT NULL")
+    Long countStaffCancelledByUserAndScheduleAndDate(@Param("userId") Long userId, @Param("scheduleId") Long scheduleId, @Param("date") LocalDate date);
     
     // Buscar todas las reservas confirmadas con JOIN FETCH
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.schedule s WHERE r.status = 'CONFIRMED' ORDER BY r.date DESC, s.startTime")
@@ -42,6 +45,17 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     // Buscar reservas por schedule, fecha y status
     List<Reservation> findByScheduleIdAndDateAndStatus(Long scheduleId, LocalDate date, Reservation.ReservationStatus status);
+
+    // Contar no-shows (reservas no asistidas) dentro de una ventana de fechas
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.status = 'CONFIRMED' AND r.attended = false AND r.date BETWEEN :startDate AND :endDate")
+    Long countNoShowsInRange(@Param("userId") Long userId,
+                             @Param("startDate") LocalDate startDate,
+                             @Param("endDate") LocalDate endDate);
+
+    // Obtener reservas futuras (incluyendo hoy) confirmadas de un usuario
+    @Query("SELECT r FROM Reservation r WHERE r.user.id = :userId AND r.status = 'CONFIRMED' AND r.date >= :startDate")
+    List<Reservation> findFutureConfirmedByUser(@Param("userId") Long userId,
+                                                @Param("startDate") LocalDate startDate);
 
 
 }

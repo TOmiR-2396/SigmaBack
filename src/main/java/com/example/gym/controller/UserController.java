@@ -1,10 +1,17 @@
 package com.example.gym.controller;
 
 import com.example.gym.model.User;
+import com.example.gym.dto.DeactivateUserRequest;
+import com.example.gym.dto.InactivityPolicyRequest;
+import com.example.gym.dto.InactivityPolicyResponse;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.service.RoleService;
 import com.example.gym.service.PasswordResetService;
 import com.example.gym.service.EmailService;
+import com.example.gym.service.UserDeactivationService;
+import com.example.gym.tenant.TenantSwitch;
+import com.example.gym.tenant.TenantSwitchRepository;
+import com.example.gym.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,10 +20,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import com.example.gym.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
+import com.example.gym.tenant.TenantContext;
 
 @RestController
 @RequestMapping({"/api/auth","/api"})
@@ -31,6 +40,15 @@ public class UserController {
     private PasswordResetService passwordResetService;
     @Autowired
     private EmailService emailService;
+    @Autowired
+    private UserDeactivationService userDeactivationService;
+    @Autowired
+    private TenantSwitchRepository tenantSwitchRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${user.inactivity.default-days:14}")
+    private int defaultInactivityDays;
+
+    private static final String INACTIVITY_SWITCH_KEY = "INACTIVITY_AUTO_DEACTIVATE";
 
     public UserController(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -61,11 +79,32 @@ public class UserController {
     // ================= Login =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        User user = userRepository.findByEmail(request.get("email"))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!passwordEncoder.matches(request.get("password"), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+        String email = request.get("email");
+        String password = request.get("password");
+        
+        if (email == null || email.trim().isEmpty()) {
+            throw new InvalidCredentialsException("Email es requerido");
         }
+        if (password == null || password.trim().isEmpty()) {
+            throw new InvalidCredentialsException("Contraseña es requerida");
+        }
+        
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con email: " + email));
+        
+        // Verificar si está desactivado
+        if (user.getDeactivatedAt() != null) {
+            throw new DeactivatedUserException("La cuenta ha sido desactivada");
+        }
+        
+        // Verificar credenciales
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new InvalidCredentialsException("Contraseña incorrecta");
+        }
+        
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+        
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
@@ -197,6 +236,10 @@ public class UserController {
         User owner = (User) authentication.getPrincipal();
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         user.setStatus(User.UserStatus.ACTIVE);
+        user.setDeactivatedAt(null);
+        user.setDeactivatedByUserId(null);
+        user.setDeactivatedByRole(null);
+        user.setDeactivationReason(null);
         userRepository.save(user);
         return ResponseEntity.ok("Usuario activado por OWNER: " + owner.getEmail());
     }
@@ -205,11 +248,90 @@ public class UserController {
     @PostMapping("/deactivate-user")
     public ResponseEntity<?> deactivateUser(@RequestBody Map<String, Long> ids, Authentication authentication) {
         Long userId = ids.get("userId");
-        User owner = (User) authentication.getPrincipal();
+        User actor = (User) authentication.getPrincipal();
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        user.setStatus(User.UserStatus.INACTIVE);
-        userRepository.save(user);
-        return ResponseEntity.ok("Usuario desactivado por OWNER: " + owner.getEmail());
+        if (user.getRole() != User.UserRole.MEMBER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Solo se pueden desactivar usuarios MEMBER");
+        }
+        userDeactivationService.deactivateUser(user, actor, "MANUAL");
+        return ResponseEntity.ok("Usuario desactivado por " + actor.getRole() + ": " + actor.getEmail());
+    }
+
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/users/{userId}/deactivate")
+    public ResponseEntity<?> deactivateUserWithReason(@PathVariable Long userId,
+                                                      @RequestBody DeactivateUserRequest request,
+                                                      Authentication authentication) {
+        User actor = (User) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getRole() != User.UserRole.MEMBER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Solo se pueden desactivar usuarios MEMBER");
+        }
+        String reason = request != null ? request.getReason() : null;
+        userDeactivationService.deactivateUser(user, actor, reason);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Usuario desactivado por " + actor.getRole());
+        response.put("userId", user.getId());
+        response.put("deactivatedByUserId", actor.getId());
+        response.put("deactivatedByRole", actor.getRole().name());
+        response.put("reason", reason);
+        return ResponseEntity.ok(response);
+    }
+
+    // ================= Política de inactividad =================
+
+    @PreAuthorize("hasRole('OWNER')")
+    @GetMapping("/users/inactivity-policy")
+    public ResponseEntity<?> getInactivityPolicy() {
+        InactivityPolicyResponse response = new InactivityPolicyResponse();
+        TenantSwitch sw = tenantSwitchRepository.findByTenantIdAndKey(getTenantIdSafe(), INACTIVITY_SWITCH_KEY)
+            .orElse(null);
+        int days = defaultInactivityDays;
+        boolean enabled = false;
+        if (sw != null) {
+            enabled = sw.isEnabled();
+            Integer parsed = parseDays(sw.getPayload());
+            if (parsed != null) {
+                days = parsed;
+            }
+        }
+        response.setDays(days);
+        response.setEnabled(enabled);
+        response.setDefaultDays(defaultInactivityDays);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('OWNER')")
+    @PutMapping("/users/inactivity-policy")
+    public ResponseEntity<?> updateInactivityPolicy(@RequestBody InactivityPolicyRequest request) {
+        if (request.getDays() == null && request.getEnabled() == null) {
+            return ResponseEntity.badRequest().body("Debe enviar days o enabled");
+        }
+        Integer days = request.getDays();
+        if (days != null && (days < 1 || days > 365)) {
+            return ResponseEntity.badRequest().body("days debe estar entre 1 y 365");
+        }
+
+        String tenantId = getTenantIdSafe();
+        TenantSwitch sw = tenantSwitchRepository.findByTenantIdAndKey(tenantId, INACTIVITY_SWITCH_KEY)
+            .orElse(TenantSwitch.builder().key(INACTIVITY_SWITCH_KEY).build());
+
+        if (request.getEnabled() != null) {
+            sw.setEnabled(request.getEnabled());
+        }
+        if (days != null) {
+            sw.setPayload(String.valueOf(days));
+        }
+
+        tenantSwitchRepository.save(sw);
+
+        InactivityPolicyResponse response = new InactivityPolicyResponse();
+        response.setDays(days != null ? days : parseDaysOrDefault(sw.getPayload()));
+        response.setEnabled(sw.isEnabled());
+        response.setDefaultDays(defaultInactivityDays);
+        return ResponseEntity.ok(response);
     }
 
     // ================= Obtener mis datos =================
@@ -247,6 +369,30 @@ public class UserController {
     public ResponseEntity<?> searchUsers(@RequestParam(name = "q", required = false) String q) {
         List<User> users = userRepository.searchUsers(q == null || q.isBlank() ? null : q.trim());
         return ResponseEntity.ok(mapUsers(users));
+    }
+
+    private String getTenantIdSafe() {
+        String tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalStateException("Tenant requerido para configurar política de inactividad");
+        }
+        return tenantId;
+    }
+
+    private Integer parseDays(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(payload.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private int parseDaysOrDefault(String payload) {
+        Integer parsed = parseDays(payload);
+        return parsed != null ? parsed : defaultInactivityDays;
     }
 
     private List<Map<String,Object>> mapUsers(List<User> users) {

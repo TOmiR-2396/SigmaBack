@@ -6,6 +6,7 @@ import com.example.gym.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.annotation.PostConstruct;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,6 +38,22 @@ public class TurnosController {
     
     @Autowired
     private ReservationRepository reservationRepository;
+
+    @Value("${reservation.noshow.threshold:3}")
+    private int defaultNoShowThreshold;
+
+    @Value("${reservation.noshow.window-days:14}")
+    private int defaultNoShowWindowDays;
+
+    // Valores mutables configurables por OWNER vía endpoint
+    private volatile int configuredNoShowThreshold;
+    private volatile int configuredNoShowWindowDays;
+
+    @PostConstruct
+    private void initNoShowPolicy() {
+        this.configuredNoShowThreshold = Math.max(defaultNoShowThreshold, 1);
+        this.configuredNoShowWindowDays = Math.max(defaultNoShowWindowDays, 1);
+    }
 
     // =============== OWNER ENDPOINTS - Gestión de horarios ===============
     
@@ -273,12 +291,20 @@ public class TurnosController {
             }
             
         
-            // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha (fix para reservas canceladas)
+            // Verificar que el usuario no tenga ya una reserva CONFIRMADA para ese horario y fecha
             Long existingReservation = reservationRepository
                 .countConfirmedByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
             if (existingReservation != null && existingReservation > 0) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                      .body("Ya tienes una reserva confirmada para este horario y fecha");
+            }
+
+            // Si el staff canceló ese mismo turno, el usuario no puede volver a anotarse
+            Long cancelledByStaff = reservationRepository
+                .countStaffCancelledByUserAndScheduleAndDate(currentUser.getId(), request.getScheduleId(), reservationDate);
+            if (cancelledByStaff != null && cancelledByStaff > 0) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                     .body("No puedes volver a anotarte en este horario y fecha porque fue cancelado por el staff");
             }
             
             
@@ -431,6 +457,11 @@ public class TurnosController {
             // Cambiar estado a cancelada y marcar fecha de cancelación
             reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
             reservation.setCancelledAt(LocalDateTime.now());
+            if (isOwnerOrTrainer && !reservation.getUser().getId().equals(currentUser.getId())) {
+                reservation.setCancelledByUserId(currentUser.getId());
+                reservation.setCancelledByRole(currentUser.getRole().name());
+                reservation.setCancellationReason("REMOVED_BY_STAFF");
+            }
             reservationRepository.save(reservation);
             
             return ResponseEntity.ok("Reserva cancelada exitosamente");
@@ -443,6 +474,7 @@ public class TurnosController {
     // PUT /api/turnos/reservation/{reservationId}/attendance - Marcar presentismo/asistencia
     @PutMapping("/reservation/{reservationId}/attendance")
     @PreAuthorize("hasRole('OWNER') or hasRole('TRAINER')")
+    @Transactional
     public ResponseEntity<?> markAttendance(@PathVariable Long reservationId, @RequestBody AttendanceRequest request) {
         try {
             Optional<Reservation> reservationOpt = reservationRepository.findById(reservationId);
@@ -470,7 +502,15 @@ public class TurnosController {
             }
             
             reservationRepository.save(reservation);
-            
+
+            int cancelledFutureReservations = 0;
+            if (Boolean.FALSE.equals(request.getAttended()) && isPastOrToday(reservation.getDate())) {
+                cancelledFutureReservations = applyNoShowPolicy(reservation.getUser());
+                if (cancelledFutureReservations > 0) {
+                    logger.info("Se cancelaron {} reservas futuras para el usuario {} por exceder el límite de inasistencias", cancelledFutureReservations, reservation.getUser().getId());
+                }
+            }
+
             return ResponseEntity.ok(mapReservationToDTO(reservation));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -521,6 +561,88 @@ public class TurnosController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Error al obtener reservas: " + e.getMessage());
         }
+    }
+
+    // =============== OWNER - Configuración de política de no-shows ===============
+
+    @GetMapping("/noshow-policy")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> getNoShowPolicy() {
+        return ResponseEntity.ok(buildNoShowPolicyResponse());
+    }
+
+    @PutMapping("/noshow-policy")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> updateNoShowPolicy(@RequestBody NoShowPolicyRequest request) {
+        try {
+            if (request.getThreshold() == null && request.getWindowDays() == null) {
+                return ResponseEntity.badRequest().body("Debe enviar al menos un campo: threshold o windowDays");
+            }
+
+            if (request.getThreshold() != null) {
+                int value = request.getThreshold();
+                if (value < 1 || value > 50) {
+                    return ResponseEntity.badRequest().body("El threshold debe estar entre 1 y 50");
+                }
+                this.configuredNoShowThreshold = value;
+            }
+
+            if (request.getWindowDays() != null) {
+                int value = request.getWindowDays();
+                if (value < 1 || value > 60) {
+                    return ResponseEntity.badRequest().body("La ventana en días debe estar entre 1 y 60");
+                }
+                this.configuredNoShowWindowDays = value;
+            }
+
+            return ResponseEntity.ok(buildNoShowPolicyResponse());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error al actualizar la política de no-shows: " + e.getMessage());
+        }
+    }
+
+    // ===== Política de no-shows =====
+    private int applyNoShowPolicy(User user) {
+        int effectiveThreshold = Math.max(configuredNoShowThreshold, 1);
+        int effectiveWindowDays = Math.max(configuredNoShowWindowDays, 1);
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(effectiveWindowDays - 1L);
+
+        Long noShows = reservationRepository.countNoShowsInRange(user.getId(), startDate, today);
+        long totalNoShows = noShows != null ? noShows : 0L;
+
+        if (totalNoShows < effectiveThreshold) {
+            return 0;
+        }
+
+        List<Reservation> futureReservations = reservationRepository.findFutureConfirmedByUser(user.getId(), today);
+        if (futureReservations.isEmpty()) {
+            return 0;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (Reservation reservation : futureReservations) {
+            reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
+            reservation.setCancelledAt(now);
+        }
+
+        reservationRepository.saveAll(futureReservations);
+        return futureReservations.size();
+    }
+
+    private boolean isPastOrToday(LocalDate date) {
+        return !date.isAfter(LocalDate.now());
+    }
+
+    private NoShowPolicyResponse buildNoShowPolicyResponse() {
+        NoShowPolicyResponse response = new NoShowPolicyResponse();
+        response.setThreshold(configuredNoShowThreshold);
+        response.setWindowDays(configuredNoShowWindowDays);
+        response.setDefaultThreshold(defaultNoShowThreshold);
+        response.setDefaultWindowDays(defaultNoShowWindowDays);
+        return response;
     }
 
     // =============== MÉTODOS DE MAPEO ===============

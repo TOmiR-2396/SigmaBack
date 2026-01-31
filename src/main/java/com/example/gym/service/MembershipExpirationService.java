@@ -4,6 +4,7 @@ import com.example.gym.model.Subscription;
 import com.example.gym.model.User;
 import com.example.gym.repository.SubscriptionRepository;
 import com.example.gym.repository.UserRepository;
+import com.example.gym.service.UserDeactivationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class MembershipExpirationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserDeactivationService userDeactivationService;
 
     /**
      * Job programado que se ejecuta todos los días a las 02:00 AM
@@ -61,8 +65,7 @@ public class MembershipExpirationService {
                 
                 // Solo desactivar usuarios MEMBER (no tocar OWNER/ADMIN)
                 if (user.getRole() == User.UserRole.MEMBER && user.getStatus() == User.UserStatus.ACTIVE) {
-                    user.setStatus(User.UserStatus.INACTIVE);
-                    userRepository.save(user);
+                    userDeactivationService.deactivateUser(user, null, "MEMBERSHIP_EXPIRED");
                     usersDeactivated++;
                     
                     logger.info("Usuario desactivado por membresía vencida: {} (ID: {})", 

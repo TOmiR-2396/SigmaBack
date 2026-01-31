@@ -9,7 +9,11 @@ import org.hibernate.annotations.ParamDef;
 
 @MappedSuperclass
 @EntityListeners(TenantEntityListener.class)
-@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
+@FilterDef(
+    name = "tenantFilter",
+    parameters = @ParamDef(name = "tenantId", type = String.class),
+    defaultCondition = "tenant_id = :tenantId"
+)
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public abstract class TenantEntity implements TenantScoped {
 

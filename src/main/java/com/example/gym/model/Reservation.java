@@ -51,6 +51,15 @@ public class Reservation extends TenantEntity {
     @Column
     private LocalDateTime cancelledAt;
 
+    @Column
+    private Long cancelledByUserId;
+
+    @Column
+    private String cancelledByRole;
+
+    @Column
+    private String cancellationReason;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
