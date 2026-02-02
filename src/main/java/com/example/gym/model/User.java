@@ -73,6 +73,9 @@ public class User extends TenantEntity {
     @Column(nullable = false)
     private String password;
 
+    @Column(length = 500)
+    private String trainingPlanUrl;
+
     // Eliminado Set<Role> roles
 
     public enum UserStatus { ACTIVE, INACTIVE, SUSPENDED }

@@ -30,15 +30,20 @@ com/example/gym/exception/ForbiddenOperationException.class
 com/example/gym/tenant/TenantScoped.class
 com/example/gym/controller/MercadoPagoController$2.class
 com/example/gym/model/Attendance$AttendanceBuilder.class
+com/example/gym/repository/TipRepository.class
 com/example/gym/config/WebConfig.class
 com/example/gym/repository/ReservationRepository.class
+com/example/gym/dto/TipDTO.class
 com/example/gym/tenant/FeatureFlagService.class
 com/example/gym/exception/ErrorResponse.class
 com/example/gym/controller/MercadoPagoController$1.class
+com/example/gym/service/TipService.class
 com/example/gym/tenant/TenantSwitchService.class
 com/example/gym/tenant/TenantSwitch$TenantSwitchBuilder.class
+com/example/gym/dto/TipDTO$TipDTOBuilder.class
 com/example/gym/controller/TrainingPlanController.class
 com/example/gym/model/Role$RoleName.class
+com/example/gym/dto/TrainingPlanUrlRequest$TrainingPlanUrlRequestBuilder.class
 com/example/gym/tenant/TenantEntity.class
 com/example/gym/dto/ReservationRequest.class
 com/example/gym/controller/ExerciseController.class
@@ -49,6 +54,7 @@ com/example/gym/model/Subscription$SubscriptionBuilder.class
 com/example/gym/tenant/FeatureFlagService$FeatureNotEnabledException.class
 com/example/gym/service/MembershipExpirationService.class
 com/example/gym/model/Exercise.class
+com/example/gym/dto/TrainingPlanUrlRequest.class
 com/example/gym/security/JwtAuthenticationFilter.class
 com/example/gym/config/DataInitializer.class
 com/example/gym/repository/RoleRepository.class
@@ -56,6 +62,7 @@ com/example/gym/dto/MembershipInfoDTO.class
 com/example/gym/model/PasswordResetToken$PasswordResetTokenBuilder.class
 com/example/gym/model/User$UserBuilder.class
 com/example/gym/security/JwtUtil.class
+com/example/gym/controller/TipController.class
 com/example/gym/tenant/TenantEntityListener.class
 com/example/gym/model/User$UserStatus.class
 com/example/gym/service/ScheduleService.class
@@ -67,6 +74,7 @@ com/example/gym/model/Schedule$ScheduleBuilder.class
 com/example/gym/tenant/TenantSwitchRepository.class
 com/example/gym/exception/InvalidCredentialsException.class
 com/example/gym/dto/DeactivateUserRequest.class
+com/example/gym/model/Tip.class
 com/example/gym/exception/UserNotFoundException.class
 com/example/gym/model/Role$RoleBuilder.class
 com/example/gym/exception/GlobalExceptionHandler.class
@@ -74,6 +82,7 @@ com/example/gym/dto/ReservationDTO.class
 com/example/gym/dto/AttendanceRequest.class
 com/example/gym/exception/ErrorResponse$ErrorResponseBuilder.class
 com/example/gym/model/Schedule.class
+com/example/gym/model/Tip$TipBuilder.class
 com/example/gym/model/Subscription$Status.class
 com/example/gym/service/UserInactivityService.class
 com/example/gym/repository/SubscriptionRepository.class

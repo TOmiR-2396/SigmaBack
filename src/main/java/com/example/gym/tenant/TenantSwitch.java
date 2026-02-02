@@ -5,7 +5,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "tenant_switches", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_tenant_switch", columnNames = {"tenant_id", "flag_key"})
+        @UniqueConstraint(name = "uq_tenant_switch", columnNames = {"tenant_id", "switch_key"})
 })
 @Data
 @NoArgsConstructor
@@ -17,7 +17,7 @@ public class TenantSwitch extends TenantEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "flag_key", nullable = false, length = 100)
+    @Column(name = "switch_key", nullable = false, length = 100)
     private String key;
 
     @Column(nullable = false)

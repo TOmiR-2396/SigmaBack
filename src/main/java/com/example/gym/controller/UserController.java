@@ -4,6 +4,7 @@ import com.example.gym.model.User;
 import com.example.gym.dto.DeactivateUserRequest;
 import com.example.gym.dto.InactivityPolicyRequest;
 import com.example.gym.dto.InactivityPolicyResponse;
+import com.example.gym.dto.TrainingPlanUrlRequest;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.service.RoleService;
 import com.example.gym.service.PasswordResetService;
@@ -405,8 +406,90 @@ public class UserController {
             userMap.put("firstName", u.getFirstName());
             userMap.put("lastName", u.getLastName());
             userMap.put("status", u.getStatus());
+            userMap.put("trainingPlanUrl", u.getTrainingPlanUrl());
             result.add(userMap);
         }
         return result;
+    }
+
+    // ================= Training Plan URL =================
+
+    /**
+     * Obtener URL del plan de entrenamiento del usuario
+     * GET /api/users/{userId}/training-plan-url
+     */
+    @GetMapping("/users/{userId}/training-plan-url")
+    public ResponseEntity<?> getTrainingPlanUrl(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getId());
+        response.put("trainingPlanUrl", user.getTrainingPlanUrl());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Crear o actualizar URL del plan de entrenamiento
+     * POST /api/users/{userId}/training-plan-url
+     * Solo OWNER puede hacerlo
+     */
+    @PostMapping("/users/{userId}/training-plan-url")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> updateTrainingPlanUrl(
+            @PathVariable Long userId,
+            @RequestBody TrainingPlanUrlRequest request) {
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
+
+        // Validar que sea MEMBER
+        if (user.getRole() != User.UserRole.MEMBER) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Solo se puede asignar plan de entrenamiento a MEMBER. El usuario es: " + user.getRole());
+        }
+
+        // Validar URL
+        if (request.getUrl() == null || request.getUrl().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("La URL no puede estar vacía");
+        }
+
+        // Validar que sea una URL válida (simple check)
+        if (!request.getUrl().trim().startsWith("http://") && !request.getUrl().trim().startsWith("https://")) {
+            return ResponseEntity.badRequest().body("La URL debe comenzar con http:// o https://");
+        }
+
+        if (request.getUrl().length() > 500) {
+            return ResponseEntity.badRequest().body("La URL no puede exceder 500 caracteres");
+        }
+
+        user.setTrainingPlanUrl(request.getUrl().trim());
+        userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getId());
+        response.put("trainingPlanUrl", user.getTrainingPlanUrl());
+        response.put("message", "URL del plan actualizada exitosamente");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Eliminar URL del plan de entrenamiento
+     * DELETE /api/users/{userId}/training-plan-url
+     * Solo OWNER puede hacerlo
+     */
+    @DeleteMapping("/users/{userId}/training-plan-url")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> deleteTrainingPlanUrl(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + userId));
+
+        user.setTrainingPlanUrl(null);
+        userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getId());
+        response.put("message", "URL del plan eliminada exitosamente");
+        return ResponseEntity.ok(response);
     }
 }

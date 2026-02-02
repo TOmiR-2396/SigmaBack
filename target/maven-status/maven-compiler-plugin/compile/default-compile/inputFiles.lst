@@ -23,6 +23,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TenantController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Schedule.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/ExerciseController.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TipController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Exercise.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/ScheduleService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/tenant/TenantScoped.java
@@ -33,6 +34,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/MembershipExpirationService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/EmailService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/InactivityPolicyResponse.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/TipDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/UserController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/ScheduleDTO.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/exception/UserNotFoundException.java
@@ -52,6 +54,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/MembershipExpirationController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/NoShowPolicyRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/config/WebConfig.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/TipRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/exception/GlobalExceptionHandler.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/MembershipPlanRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/FeatureFlagDTO.java
@@ -63,7 +66,9 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/MembershipPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/TrainingPlan.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TrainingPlanController.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/service/TipService.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/ReservationRequest.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Tip.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/exception/ForbiddenOperationException.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/TurnosController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/Attendance.java
@@ -73,6 +78,7 @@
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/controller/MercadoPagoController.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/AssignTemplateRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/model/User.java
+/Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/dto/TrainingPlanUrlRequest.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/SubscriptionRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/repository/AttendanceRepository.java
 /Users/santiago/Proyectos/SigmaBack/src/main/java/com/example/gym/exception/DeactivatedUserException.java
