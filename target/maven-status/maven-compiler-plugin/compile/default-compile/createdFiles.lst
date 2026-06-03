@@ -1,5 +1,6 @@
 com/example/gym/model/PaymentRecord$PaymentRecordBuilder.class
 com/example/gym/model/PaymentRecord$PaymentMethod.class
+com/example/gym/controller/MercadoPagoOAuthController$2.class
 com/example/gym/model/PaymentRecord$PaymentStatus.class
 com/example/gym/model/PaymentRecord.class
 com/example/gym/repository/PaymentRecordRepository.class

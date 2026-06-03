@@ -83,6 +83,7 @@ services:
 
 volumes:
   dbdata:
+    external: true
 
 networks:
   gym-network:

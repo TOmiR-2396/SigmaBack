@@ -118,6 +118,8 @@ public class MercadoPagoOAuthController {
         }
 
         try {
+            logger.info("[MP OAuth] Intercambiando code por tokens — tenant={} code={}...", tenantId, code.substring(0, Math.min(8, code.length())));
+
             ObjectMapper mapper = new ObjectMapper();
             Map<String, String> body = new HashMap<>();
             body.put("client_id",     clientId);
@@ -126,15 +128,20 @@ public class MercadoPagoOAuthController {
             body.put("grant_type",    "authorization_code");
             body.put("redirect_uri",  redirectUri);
 
+            String jsonBody = mapper.writeValueAsString(body);
+            logger.debug("[MP OAuth] Request body: {}", jsonBody.replace(clientSecret, "***"));
+
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.mercadopago.com/oauth/token"))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
                     .build();
 
             HttpResponse<String> resp = HttpClient.newHttpClient()
                     .send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+            logger.info("[MP OAuth] Respuesta de token — status={}", resp.statusCode());
 
             if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
                 Map<String, Object> token = mapper.readValue(resp.body(), new TypeReference<>() {});
@@ -146,6 +153,8 @@ public class MercadoPagoOAuthController {
                         ? Instant.now().plusSeconds(Long.parseLong(String.valueOf(expiresIn))).toString()
                         : null;
 
+                logger.info("[MP OAuth] Access token recibido (len={}) userId={}", accessToken.length(), userId);
+
                 // El callback es público (sin X-Tenant-ID), así que el filtro de tenant
                 // puede estar apuntando al tenant default. Lo corregimos antes de guardar.
                 overrideTenantContext(tenantId);
@@ -155,7 +164,12 @@ public class MercadoPagoOAuthController {
             } else {
                 logger.error("[MP OAuth] Error al intercambiar code: status={} body={}",
                         resp.statusCode(), resp.body());
-                response.sendRedirect(errorUrl);
+                String detail = "";
+                try {
+                    Map<String, Object> err = mapper.readValue(resp.body(), new TypeReference<>() {});
+                    detail = String.valueOf(err.getOrDefault("message", err.getOrDefault("error", "")));
+                } catch (Exception ignored) {}
+                response.sendRedirect(errorUrl + (detail.isBlank() ? "" : "&detail=" + enc(detail)));
             }
         } catch (Exception e) {
             logger.error("[MP OAuth] Excepción: {}", e.getMessage(), e);
