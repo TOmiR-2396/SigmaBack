@@ -30,13 +30,22 @@ multitenancy:
   switches:
     cache-seconds: ${TENANT_SWITCH_CACHE:60}
 
-## Credenciales de Mercado Pago (SIEMPRE usar variables de entorno)
-## NUNCA commitear credenciales reales a git
+## Credenciales de Mercado Pago (SIEMPRE usar variables de entorno, NUNCA commitear valores reales)
+##
+## Modelo Marketplace (Split 1:1):
+##   integrator-public-key  → public key de GESTIGYM (el integrador/plataforma, siempre la misma)
+##   access-token            → fallback; en producción cada tenant guarda el suyo en DB vía OAuth
+##   commission-percent      → comisión default de gestigym (puede sobreescribirse por tenant en DB)
 mercadopago:
+  integrator-public-key: ${MP_INTEGRATOR_PUBLIC_KEY:}
   access-token: ${MP_ACCESS_TOKEN:}
-  public-key: ${MP_PUBLIC_KEY:}
   webhook-secret: ${MP_WEBHOOK_SECRET:}
-  webhook-strict: ${MP_WEBHOOK_STRICT:false}  # true en producción
+  webhook-strict: ${MP_WEBHOOK_STRICT:false}
+  commission-percent: ${MP_COMMISSION_PERCENT:5.0}
+  client-id: ${MP_CLIENT_ID:}
+  client-secret: ${MP_CLIENT_SECRET:}
+  oauth-redirect-uri: ${MP_OAUTH_REDIRECT_URI:http://localhost:8081/api/mp/oauth/callback}
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:5173}
 
 # URL base del frontend para reset de contraseña (debe terminar en ?token=)
 app:
@@ -64,6 +73,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+    defer-datasource-initialization: true
     open-in-view: false
     show-sql: true
     properties:
@@ -74,6 +84,14 @@ spring:
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
+
+# Credenciales de prueba MercadoPago (solo dev)
+# integrator-public-key vacía: frontend usa Checkout Pro redirect (evita loop del SDK en local)
+# access-token: token de prueba del seller (en prod viene de DB por tenant vía OAuth)
+mercadopago:
+  integrator-public-key: ""
+  access-token: TEST-1152328780570006-051819-ef4db10ac5b599bc0e74051aeed31c67-113499327
+  commission-percent: 5.0
 
 ---
 spring:

@@ -55,10 +55,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             User user = userRepository.findByEmail(email).orElse(null);
             if (user != null && jwtUtil.validateToken(token)) {
-                // Verificar que el usuario esté activo para endpoints protegidos
-                if (user.getStatus() == User.UserStatus.ACTIVE || 
-                    path.equals("/api/me")) { // /me permite ver perfil aunque esté inactivo
-                    
+                boolean isActive = user.getStatus() == User.UserStatus.ACTIVE;
+                boolean allowedForInactive = path.equals("/api/auth/me")
+                        || path.equals("/api/me")
+                        || path.startsWith("/api/membership-plans")
+                        || path.equals("/api/mp/preference")
+                        || path.startsWith("/api/payments/");
+
+                if (isActive || allowedForInactive) {
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             user, null, java.util.List.of(authority));

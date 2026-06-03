@@ -43,8 +43,8 @@ public class SecurityConfig {
             .requestCache(rc -> rc.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/api/auth/**", "/actuator/health", "/error").permitAll()
-                // Webhook público para Mercado Pago (recibe notificaciones desde MP)
-                .requestMatchers("/webhooks/mercadopago").permitAll()
+                // Webhook y callback OAuth de Mercado Pago (endpoints públicos, sin JWT)
+                .requestMatchers("/webhooks/mercadopago", "/api/mp/oauth/callback").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
             )
