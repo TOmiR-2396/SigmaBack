@@ -1,6 +1,12 @@
 package com.example.gym.controller;
 
 import com.example.gym.dto.CreatePreferenceRequest;
+import com.example.gym.model.MembershipPlan;
+import com.example.gym.repository.MembershipPlanRepository;
+import com.example.gym.service.MercadoPagoCredentialService;
+import com.example.gym.service.PaymentService;
+import com.example.gym.tenant.TenantContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,14 +37,14 @@ public class MercadoPagoController {
     
     private static final Logger logger = LoggerFactory.getLogger(MercadoPagoController.class);
 
-    @Value("${mercadopago.public-key:}")
-    private String publicKey;
+    @Autowired
+    private PaymentService paymentService;
 
-    @Value("${mercadopago.access-token:}")
-    private String accessToken;
+    @Autowired
+    private MembershipPlanRepository planRepository;
 
-    @Value("${mercadopago.webhook-secret:}")
-    private String webhookSecret;
+    @Autowired
+    private MercadoPagoCredentialService mpCredentials;
 
     @Value("${mercadopago.webhook-strict:false}")
     private boolean webhookStrict;
@@ -47,22 +53,135 @@ public class MercadoPagoController {
     private String frontendBase;
 
     /**
+     * Procesa un pago enviado por el Payment Brick (Checkout API / Transparent Checkout).
+     * El Brick tokeniza los datos de la tarjeta y envía el token + metadata acá.
+     * El backend llama a POST /v1/payments en MP y activa la suscripción si el pago es aprobado.
+     */
+    @PostMapping("/api/payments/process")
+    public ResponseEntity<?> processPayment(
+            @RequestBody Map<String, Object> body,
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            com.example.gym.model.User user = (com.example.gym.model.User) authentication.getPrincipal();
+
+            Object planIdObj = body.get("planId");
+            Object paymentData = body.get("paymentData");
+            if (planIdObj == null || !(paymentData instanceof Map)) {
+                return ResponseEntity.badRequest().body("planId y paymentData son requeridos");
+            }
+
+            Long planId = Long.parseLong(String.valueOf(planIdObj));
+            com.example.gym.model.MembershipPlan plan = planRepository.findById(planId).orElse(null);
+            if (plan == null) {
+                return ResponseEntity.badRequest().body("Plan no encontrado: " + planId);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> pd = (Map<String, Object>) paymentData;
+            Map<String, Object> paymentBody = new HashMap<>(pd);
+            double price = plan.getPrice();
+            paymentBody.put("transaction_amount", price);
+            paymentBody.put("description", "GestiGym - " + plan.getName());
+
+            String tenantId = TenantContext.getCurrentTenant();
+            String externalRef = tenantId + ":" + user.getId() + ":" + planId;
+            paymentBody.put("external_reference", externalRef);
+
+            // Split 1:1 Marketplace: comisión de gestigym
+            double fee = mpCredentials.calculateFee(price);
+            if (fee > 0) {
+                paymentBody.put("application_fee", fee);
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            String json = mapper.writeValueAsString(paymentBody);
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.mercadopago.com/v1/payments"))
+                .header("Authorization", "Bearer " + mpCredentials.getAccessToken())
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                .build();
+
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            Map<String, Object> mpResp = mapper.readValue(resp.body(), new TypeReference<Map<String, Object>>(){});
+
+            if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
+                String status = String.valueOf(mpResp.get("status"));
+                String paymentId = String.valueOf(mpResp.get("id"));
+                if ("approved".equalsIgnoreCase(status)) {
+                    paymentService.activateSubscription(externalRef, paymentId);
+                }
+                return ResponseEntity.ok(Map.of(
+                    "status", status,
+                    "paymentId", mpResp.get("id"),
+                    "detail", mpResp.getOrDefault("status_detail", "")
+                ));
+            } else {
+                logger.error("[MP/process] Error: status={} body={}", resp.statusCode(), resp.body());
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body("MP API error: " + resp.statusCode() + " - " + resp.body());
+            }
+        } catch (Exception e) {
+            logger.error("[MP/process] Excepción: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error procesando pago: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Devuelve la public key de MP para que el frontend inicialice el Brick.
+     * Accesible también para usuarios INACTIVE (necesitan pagar para activarse).
+     */
+    @GetMapping("/api/payments/config")
+    public ResponseEntity<?> getPaymentsConfig() {
+        return ResponseEntity.ok(Map.of("publicKey", mpCredentials.getIntegratorPublicKey()));
+    }
+
+    /**
      * Crear Preference para Wallet Brick.
      * Frontend debe invocar este endpoint y luego inicializar el Brick con el preferenceId.
      */
     @PostMapping("/api/mp/preference")
     public ResponseEntity<?> createPreference(@RequestBody CreatePreferenceRequest req) {
         try {
-            if (req == null || req.unitPrice == null || req.unitPrice <= 0 || req.quantity == null || req.quantity <= 0) {
-                return ResponseEntity.badRequest().body("Monto o cantidad inválidos");
+            if (req == null) {
+                return ResponseEntity.badRequest().body("Request inválido");
             }
 
-            // Construir payload JSON manualmente para la API REST
+            // Si vienen planId + userId, tomamos el precio real del plan y armamos el external_reference
+            String title = req.title != null ? req.title : "SigmaGym - Membresía";
+            double price = req.unitPrice != null ? req.unitPrice : 0;
+            String externalRef = req.externalReference;
+
+            if (req.planId != null && req.userId != null) {
+                MembershipPlan plan = planRepository.findById(req.planId).orElse(null);
+                if (plan != null) {
+                    price = plan.getPrice();
+                    title = "SigmaGym - " + plan.getName();
+                    logger.info("[MP] Plan encontrado: id={} nombre='{}' precio={}", plan.getId(), plan.getName(), plan.getPrice());
+                } else {
+                    logger.warn("[MP] Plan no encontrado: planId={}", req.planId);
+                }
+                String tenantId = TenantContext.getCurrentTenant();
+                externalRef = tenantId + ":" + req.userId + ":" + req.planId;
+                logger.info("[MP] external_reference armado: {}", externalRef);
+            } else {
+                logger.info("[MP] Sin planId/userId — usando precio manual: {}", price);
+            }
+
+            int qty = req.quantity != null ? req.quantity : 1;
+            logger.info("[MP] Creando preference — title='{}' price={} qty={}", title, price, qty);
+            if (price <= 0 || qty <= 0) {
+                logger.warn("[MP] Precio o cantidad inválidos: price={} qty={}", price, qty);
+                return ResponseEntity.badRequest().body("Monto o cantidad inválidos: price=" + price + ", qty=" + qty);
+            }
+
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> item = Map.of(
-                "title", req.title != null ? req.title : "SigmaGym - Membresía",
-                "quantity", req.quantity,
-                "unit_price", req.unitPrice,
+                "title", title,
+                "quantity", qty,
+                "unit_price", price,
                 "currency_id", req.currency != null ? req.currency : "ARS"
             );
             Map<String, Object> backUrls = Map.of(
@@ -70,17 +189,23 @@ public class MercadoPagoController {
                 "pending", frontendBase,
                 "failure", frontendBase
             );
-            Map<String, Object> preferenceBody = Map.of(
-                "items", List.of(item),
-                "back_urls", backUrls,
-                "external_reference", req.externalReference,
-                "payer", (req.payerEmail != null && !req.payerEmail.isBlank()) ? Map.of("email", req.payerEmail) : null
-            );
+            Map<String, Object> preferenceBody = new HashMap<>();
+            preferenceBody.put("items", List.of(item));
+            preferenceBody.put("back_urls", backUrls);
+            preferenceBody.put("external_reference", externalRef);
+            if (req.payerEmail != null && !req.payerEmail.isBlank()) {
+                preferenceBody.put("payer", Map.of("email", req.payerEmail));
+            }
+            // Split 1:1 Marketplace: comisión de gestigym sobre cada pago
+            double fee = mpCredentials.calculateFee(price);
+            if (fee > 0) {
+                preferenceBody.put("marketplace_fee", fee);
+            }
 
             String json = mapper.writeValueAsString(preferenceBody);
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.mercadopago.com/checkout/preferences"))
-                .header("Authorization", "Bearer " + accessToken)
+                .header("Authorization", "Bearer " + mpCredentials.getAccessToken())
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
                 .build();
@@ -93,10 +218,11 @@ public class MercadoPagoController {
                     "preferenceId", respBody.get("id"),
                     "initPoint", respBody.get("init_point"),
                     "sandboxInitPoint", respBody.get("sandbox_init_point"),
-                    "publicKey", publicKey
+                    "publicKey", mpCredentials.getIntegratorPublicKey()
                 );
                 return ResponseEntity.ok(resp);
             } else {
+                logger.error("[MP] Error de API: status={} body={}", response.statusCode(), response.body());
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body("MP API error: " + response.statusCode() + " - " + response.body());
             }
@@ -117,6 +243,7 @@ public class MercadoPagoController {
                                      @RequestHeader(value = "x-signature", required = false) String signatureHeader) {
         try {
             // Validación opcional de firma del webhook
+            String webhookSecret = mpCredentials.getWebhookSecret();
             if (webhookSecret != null && !webhookSecret.isBlank()) {
                 String rawBody = extractRawBody(request);
                 boolean signatureOk = validateSignature(signatureHeader, webhookSecret, request.getRequestURI(), rawBody);
@@ -143,9 +270,15 @@ public class MercadoPagoController {
                     if (idObj != null) {
                         String paymentIdStr = String.valueOf(idObj);
                         // Consultar pago vía API REST
+                        // Obtener el tenant del external_reference si está disponible para usar sus credenciales
+                        String tenantIdForWebhook = extractTenantFromBody(body);
+                        String webhookAccessToken = tenantIdForWebhook != null
+                            ? mpCredentials.getAccessTokenForTenant(tenantIdForWebhook)
+                            : mpCredentials.getAccessToken();
+
                         HttpRequest reqPayment = HttpRequest.newBuilder()
                             .uri(URI.create("https://api.mercadopago.com/v1/payments/" + paymentIdStr))
-                            .header("Authorization", "Bearer " + accessToken)
+                            .header("Authorization", "Bearer " + webhookAccessToken)
                             .GET()
                             .build();
                         HttpClient client = HttpClient.newHttpClient();
@@ -153,11 +286,20 @@ public class MercadoPagoController {
                         if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
                             ObjectMapper mapper = new ObjectMapper();
                             Map<String, Object> payment = mapper.readValue(resp.body(), new TypeReference<Map<String, Object>>(){});
-                            // TODO: Actualizar tu estado interno: membresía, plan, orden, etc.
+                            String status = String.valueOf(payment.get("status"));
+                            String externalRef = payment.get("external_reference") instanceof String
+                                    ? (String) payment.get("external_reference") : null;
+
+                            if ("approved".equalsIgnoreCase(status)) {
+                                paymentService.activateSubscription(externalRef, paymentIdStr);
+                            } else {
+                                logger.info("[Webhook] Pago {} con status '{}' — no se activa suscripción.", paymentIdStr, status);
+                            }
+
                             return ResponseEntity.ok(Map.of(
                                 "received", true,
                                 "paymentId", payment.get("id"),
-                                "status", payment.get("status"),
+                                "status", status,
                                 "detail", payment.get("status_detail")
                             ));
                         }
@@ -229,5 +371,19 @@ public class MercadoPagoController {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) sb.append(String.format("%02x", b));
         return sb.toString();
+    }
+
+    /** Intenta extraer el tenantId del external_reference que viene en el body del webhook. */
+    private String extractTenantFromBody(Map<String, Object> body) {
+        try {
+            Object data = body.get("data");
+            if (data instanceof Map) {
+                Object extRef = ((Map<?, ?>) data).get("external_reference");
+                if (extRef instanceof String ref && ref.contains(":")) {
+                    return ref.split(":", 2)[0];
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 }

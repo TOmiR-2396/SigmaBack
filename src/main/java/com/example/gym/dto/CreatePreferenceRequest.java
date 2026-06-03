@@ -5,12 +5,15 @@ package com.example.gym.dto;
  * Podés ampliarlo según tus reglas de negocio.
  */
 public class CreatePreferenceRequest {
-    public String title;            // título del ítem
-    public Integer quantity;        // cantidad
-    public Double unitPrice;        // precio unitario
-    public String currency;         // ISO, ej: ARS
-    public String payerEmail;       // email del pagador (opcional)
-    public String externalReference;// referencia interna (opcional)
+    public String title;
+    public Integer quantity;
+    public Double unitPrice;
+    public String currency;
+    public String payerEmail;
+    public String externalReference;
+    /** Si se envía planId + userId, el backend busca el precio real y construye el external_reference automáticamente. */
+    public Long planId;
+    public Long userId;
 
     // getters/setters opcionales si fuera necesario
 }

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/membership-plans")
+@RequestMapping("/api/membership-plans")
 public class MembershipPlanController {
     // Obtener membresía activa de un usuario por su id, con tiempo restante
     @GetMapping("/user/{userId}")

@@ -1,43 +1,67 @@
 # Gym Backend (Spring Boot + MySQL)
 
-Estructura mínima para que **la base de datos funcione** con JPA/Hibernate y MySQL.
-
 ## Requisitos
+
 - Java 17+
-- Maven 3.9+
-- Docker (opcional, para levantar MySQL rápido)
+- Docker Desktop corriendo
 
-## Arranque rápido (con Docker para MySQL)
-```bash
+---
 
-INICIAR DATABASE CON --> docker compose up -d
-INGRESAR A DATABASE CON --> mysql -h 127.0.0.1 -P 3306 -u gymuser -p
+## Levantar para desarrollo (Maven + MySQL en Docker)
 
-export DB_HOST=localhost
-export DB_PORT=3307
-export DB_NAME=gymdb
-export DB_USER=gymuser
-export DB_PASSWORD=gympass
-MYSQL_ROOT_PASSWORD: rootpass
-docekr
-INICIAR EL BACKEND CON --> mvn spring-boot:run
+### 1. Iniciar MySQL
+
+```powershell
+docker-compose up mysql -d
 ```
 
-La app se inicia en `http://localhost:8080`. Hibernate creará/actualizará el esquema automáticamente (`spring.jpa.hibernate.ddl-auto=update`).
+Esperar hasta que el contenedor esté `healthy` (~20 segundos):
 
-## Módulos actuales
-- **Entidades**: `Member`, `MembershipPlan`, `Subscription`, `Attendance`
-- **Repositorios**: interfaces `JpaRepository` para CRUD básico
-- **Configuración**: `application.yml` usa variables de entorno para credenciales
-
-## Siguientes pasos sugeridos
-- Agregar controladores REST
-- DTOs y validaciones
-- Seguridad (Spring Security / JWT)
-- Migraciones con Flyway o Liquibase si prefieres control de esquema
-
-Nota:
-- El contenedor expone MySQL en el puerto 3307 del host (mapeado al 3306 interno).
-- La contraseña actual de `gymuser` es `gympass`. Si cambias la contraseña en docker-compose, recuerda que sólo aplica en la inicialización del volumen; si ya existe, deberás actualizarla manualmente o recrear el volumen.
+```powershell
+docker inspect gym-mysql --format "{{.State.Health.Status}}"
+# debe mostrar: healthy
 ```
 
+### 2. Iniciar el backend
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE="prod"; .\mvnw.cmd spring-boot:run
+```
+
+El servidor levanta en **`http://localhost:8081`**
+
+---
+
+## Usuarios de prueba
+
+Todos usan la misma contraseña: `/t@D5ncA`
+
+| Email | Nombre | Rol | Estado |
+|-------|--------|-----|--------|
+| `sabrinaadmin@sigmagym.com.ar` | Sabrina Admin | OWNER | ACTIVE | Sigma2024! 
+| `carlos.trainer@sigmagym.com.ar` | Carlos Rodríguez | TRAINER | ACTIVE |
+| `maria.trainer@sigmagym.com.ar` | María González | TRAINER | ACTIVE |
+| `juan.member@gmail.com` | Juan Pérez | MEMBER | ACTIVE |
+| `ana.member@gmail.com` | Ana López | MEMBER | INACTIVE |
+| `pedro.member@gmail.com` | Pedro Martín | MEMBER | ACTIVE |
+
+> Los usuarios se cargan automáticamente desde `docker-entrypoint-initdb.d/01-init-data.sql` la primera vez que se crea el volumen de MySQL.
+
+---
+
+## Detener
+
+```powershell
+# Solo MySQL
+docker-compose stop mysql
+
+# Todo
+docker-compose down
+```
+
+## Resetear la base de datos (borrar datos y volver a cargar el SQL inicial)
+
+```powershell
+docker-compose down -v
+docker-compose up mysql -d
+```
