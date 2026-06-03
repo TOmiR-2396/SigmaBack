@@ -49,7 +49,7 @@ public class MercadoPagoController {
     @Value("${mercadopago.webhook-strict:false}")
     private boolean webhookStrict;
 
-    @Value("${app.frontend.reset-url:http://localhost:5173/}")
+    @Value("${mercadopago.frontend-url:http://localhost:5173}")
     private String frontendBase;
 
     /**
@@ -139,6 +139,40 @@ public class MercadoPagoController {
     }
 
     /**
+     * Verifica el estado de un pago en Mercado Pago.
+     */
+    @GetMapping("/api/payments/verify/{paymentId}")
+    public ResponseEntity<?> verifyPayment(@PathVariable String paymentId) {
+        try {
+            HttpRequest reqPayment = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.mercadopago.com/v1/payments/" + paymentId))
+                .header("Authorization", "Bearer " + mpCredentials.getAccessToken())
+                .GET()
+                .build();
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> resp = client.send(reqPayment, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> payment = mapper.readValue(resp.body(), new TypeReference<Map<String, Object>>(){});
+                return ResponseEntity.ok(Map.of(
+                    "id", payment.get("id"),
+                    "status", payment.get("status"),
+                    "status_detail", payment.get("status_detail"),
+                    "transaction_amount", payment.get("transaction_amount"),
+                    "external_reference", payment.get("external_reference")
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body("MP API error: " + resp.statusCode());
+            }
+        } catch (Exception e) {
+            logger.error("[MP/verify] Error verificando pago {}: {}", paymentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error verificando pago: " + e.getMessage());
+        }
+    }
+
+    /**
      * Crear Preference para Wallet Brick.
      * Frontend debe invocar este endpoint y luego inicializar el Brick con el preferenceId.
      */
@@ -184,10 +218,11 @@ public class MercadoPagoController {
                 "unit_price", price,
                 "currency_id", req.currency != null ? req.currency : "ARS"
             );
+            String base = frontendBase.replaceAll("/+$", "");
             Map<String, Object> backUrls = Map.of(
-                "success", frontendBase,
-                "pending", frontendBase,
-                "failure", frontendBase
+                "success", base + "/payment/success",
+                "pending", base + "/payment/pending",
+                "failure", base + "/payment/failure"
             );
             Map<String, Object> preferenceBody = new HashMap<>();
             preferenceBody.put("items", List.of(item));
@@ -270,11 +305,8 @@ public class MercadoPagoController {
                     if (idObj != null) {
                         String paymentIdStr = String.valueOf(idObj);
                         // Consultar pago vía API REST
-                        // Obtener el tenant del external_reference si está disponible para usar sus credenciales
-                        String tenantIdForWebhook = extractTenantFromBody(body);
-                        String webhookAccessToken = tenantIdForWebhook != null
-                            ? mpCredentials.getAccessTokenForTenant(tenantIdForWebhook)
-                            : mpCredentials.getAccessToken();
+                        // Consultar el pago con el token del integrador (siempre puede ver pagos de sellers)
+                        String webhookAccessToken = mpCredentials.getAccessToken();
 
                         HttpRequest reqPayment = HttpRequest.newBuilder()
                             .uri(URI.create("https://api.mercadopago.com/v1/payments/" + paymentIdStr))

@@ -64,7 +64,12 @@ public class MercadoPagoOAuthController {
     @GetMapping("/api/payments/mercadopago/oauth-start")
     public ResponseEntity<?> oauthStart() {
         if (clientId == null || clientId.isBlank()) {
+            logger.error("[MP OAuth] MP_CLIENT_ID no está configurado");
             return ResponseEntity.badRequest().body("MP_CLIENT_ID no está configurado en el servidor");
+        }
+        if (clientSecret == null || clientSecret.isBlank()) {
+            logger.error("[MP OAuth] MP_CLIENT_SECRET no está configurado");
+            return ResponseEntity.badRequest().body("MP_CLIENT_SECRET no está configurado en el servidor");
         }
         String tenantId = TenantContext.getCurrentTenant();
         // state = base64(tenantId) — para recuperar el tenant en el callback público
@@ -75,8 +80,9 @@ public class MercadoPagoOAuthController {
                 + "&response_type=code"
                 + "&platform_id=mp"
                 + "&state="         + enc(state)
-                + "&redirect_uri="  + enc(redirectUri);
-        logger.info("[MP OAuth] Iniciando OAuth para tenant={}", tenantId);
+                + "&redirect_uri="  + enc(redirectUri)
+                + "&scope=read,write,offline_access";
+        logger.info("[MP OAuth] Iniciando OAuth para tenant={} redirectUri={}", tenantId, redirectUri);
         return ResponseEntity.ok(Map.of("authUrl", authUrl));
     }
 
