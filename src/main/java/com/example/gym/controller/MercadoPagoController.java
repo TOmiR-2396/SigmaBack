@@ -2,7 +2,11 @@ package com.example.gym.controller;
 
 import com.example.gym.dto.CreatePreferenceRequest;
 import com.example.gym.model.MembershipPlan;
+import com.example.gym.model.PaymentRecord;
+import com.example.gym.model.Subscription;
+import com.example.gym.model.User;
 import com.example.gym.repository.MembershipPlanRepository;
+import com.example.gym.repository.PaymentRecordRepository;
 import com.example.gym.service.MercadoPagoCredentialService;
 import com.example.gym.service.PaymentService;
 import com.example.gym.tenant.TenantContext;
@@ -22,6 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +47,9 @@ public class MercadoPagoController {
 
     @Autowired
     private MembershipPlanRepository planRepository;
+
+    @Autowired
+    private PaymentRecordRepository paymentRecordRepository;
 
     @Autowired
     private MercadoPagoCredentialService mpCredentials;
@@ -397,6 +405,55 @@ public class MercadoPagoController {
             }
         } catch (Exception ignore) {}
         return map;
+    }
+
+    /**
+     * Historial de pagos del usuario logueado.
+     */
+    @GetMapping("/api/payments/history")
+    public ResponseEntity<?> getMyPaymentHistory(org.springframework.security.core.Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        List<PaymentRecord> records = paymentRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        return ResponseEntity.ok(records.stream().map(this::toPaymentDto).collect(Collectors.toList()));
+    }
+
+    /**
+     * Registra un pago en efectivo (OWNER/TRAINER/ADMIN).
+     */
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('OWNER','ADMIN','TRAINER')")
+    @PostMapping("/api/payments/cash")
+    public ResponseEntity<?> registerCashPayment(
+            @RequestParam("userId") Long userId,
+            @RequestParam("planId") Long planId,
+            org.springframework.security.core.Authentication auth) {
+        try {
+            User registeredBy = (User) auth.getPrincipal();
+            Subscription sub = paymentService.registerCashPayment(userId, planId, registeredBy);
+            return ResponseEntity.ok(Map.of(
+                "message", "Pago en efectivo registrado correctamente",
+                "subscriptionId", sub.getId(),
+                "endDate", sub.getEndDate().toString()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("[Payment/cash] Error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error registrando pago: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> toPaymentDto(PaymentRecord r) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", r.getId());
+        dto.put("amount", r.getAmount());
+        dto.put("method", r.getMethod().name());
+        dto.put("status", r.getStatus().name());
+        dto.put("mpPaymentId", r.getMpPaymentId());
+        dto.put("createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
+        dto.put("planName", r.getPlan() != null ? r.getPlan().getName() : null);
+        dto.put("planPrice", r.getPlan() != null ? r.getPlan().getPrice() : null);
+        dto.put("registeredBy", r.getRegisteredBy() != null ? r.getRegisteredBy().getEmail() : null);
+        return dto;
     }
 
     private String bytesToHex(byte[] bytes) {
