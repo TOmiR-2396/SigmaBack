@@ -36,6 +36,13 @@ public class TenantRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // Las rutas de super-admin no requieren tenant
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/admin/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String tenantId = resolveTenant(request);
 
         if (requireTenant && !StringUtils.hasText(tenantId)) {

@@ -44,7 +44,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/api/auth/**", "/actuator/health", "/error").permitAll()
                 // Webhook y callback OAuth de Mercado Pago (endpoints públicos, sin JWT)
-                .requestMatchers("/webhooks/mercadopago", "/api/mp/oauth/callback").permitAll()
+                .requestMatchers("/webhooks/mercadopago", "/api/mp/oauth/callback",
+                                 "/api/google-sheets/oauth/callback").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
             )

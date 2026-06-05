@@ -161,7 +161,7 @@ public class MercadoPagoCredentialService {
                 });
         sw.setPayload(value.trim());
         sw.setEnabled(true);
-        switchRepository.save(sw);
+        switchRepository.saveAndFlush(sw);
     }
 
     private void clear(String tenantId, String key) {

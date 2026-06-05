@@ -400,12 +400,16 @@ public class UserController {
         List<Map<String,Object>> result = new java.util.ArrayList<>();
         for (User u : users) {
             Map<String,Object> userMap = new HashMap<>();
-            userMap.put("id", u.getId());
-            userMap.put("email", u.getEmail());
-            userMap.put("role", u.getRole());
-            userMap.put("firstName", u.getFirstName());
-            userMap.put("lastName", u.getLastName());
-            userMap.put("status", u.getStatus());
+            userMap.put("id",              u.getId());
+            userMap.put("email",           u.getEmail());
+            userMap.put("role",            u.getRole());
+            userMap.put("firstName",       u.getFirstName());
+            userMap.put("lastName",        u.getLastName());
+            userMap.put("status",          u.getStatus());
+            userMap.put("phone",           u.getPhone());
+            userMap.put("joinDate",        u.getJoinDate());
+            userMap.put("birthDate",       u.getBirthDate());
+            userMap.put("lastLoginAt",     u.getLastLoginAt());
             userMap.put("trainingPlanUrl", u.getTrainingPlanUrl());
             result.add(userMap);
         }

@@ -21,7 +21,7 @@ public class User extends TenantEntity {
     public Long getId() {
         return id;
     }
-    public enum UserRole { MEMBER, TRAINER, OWNER }
+    public enum UserRole { MEMBER, TRAINER, OWNER, SUPER_ADMIN }
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

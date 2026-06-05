@@ -35,9 +35,12 @@ public class TurnosController {
     
     @Autowired
     private ScheduleRepository scheduleRepository;
-    
+
     @Autowired
     private ReservationRepository reservationRepository;
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
 
     @Value("${reservation.noshow.threshold:3}")
     private int defaultNoShowThreshold;
@@ -308,13 +311,32 @@ public class TurnosController {
             }
             
             
+            // Verificar límite de días por semana según el plan del usuario
+            Optional<Subscription> activeSub = subscriptionRepository.findByUser(currentUser).stream()
+                .filter(s -> s.getStatus() == Subscription.Status.ACTIVE)
+                .findFirst();
+            if (activeSub.isPresent()) {
+                Integer daysPerWeek = activeSub.get().getPlan().getDaysPerWeek();
+                if (daysPerWeek != null && daysPerWeek > 0) {
+                    LocalDate weekStart = reservationDate.with(java.time.DayOfWeek.MONDAY);
+                    LocalDate weekEnd   = weekStart.plusDays(6);
+                    Long attended = reservationRepository.countAttendedInWeek(
+                            currentUser.getId(), weekStart, weekEnd);
+                    if (attended >= daysPerWeek) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body("Ya alcanzaste el límite de " + daysPerWeek
+                                        + " día(s) por semana de tu plan para esta semana");
+                    }
+                }
+            }
+
             // Verificar capacidad disponible
             Long currentReservations = reservationRepository
                 .countConfirmedReservationsByScheduleAndDate(request.getScheduleId(), reservationDate);
             if (currentReservations >= schedule.getMaxCapacity()) {
                 return ResponseEntity.badRequest().body("No hay cupos disponibles para este horario");
             }
-            
+
             // Crear la reserva
             Reservation reservation = Reservation.builder()
                 .user(currentUser)

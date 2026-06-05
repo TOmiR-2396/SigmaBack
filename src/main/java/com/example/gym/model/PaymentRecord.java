@@ -5,10 +5,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payment_records")
+@org.hibernate.annotations.Filter(name = "tenantFilter")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,8 +26,15 @@ public class PaymentRecord extends TenantEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id", nullable = false)
+    @JoinColumn(name = "plan_id", nullable = true)
     private MembershipPlan plan;
+
+    // Snapshot del plan al momento del pago — persiste aunque el plan se elimine
+    @Column(name = "plan_name_snapshot", length = 200)
+    private String planNameSnapshot;
+
+    @Column(name = "plan_price_snapshot")
+    private Double planPriceSnapshot;
 
     @Column(nullable = false)
     private Double amount;
@@ -47,12 +56,19 @@ public class PaymentRecord extends TenantEntity {
     @JoinColumn(name = "registered_by_id")
     private User registeredBy;
 
+    // Fecha real del pago (puede diferir de createdAt si se registra después)
+    @Column(name = "payment_date")
+    private LocalDate paymentDate;
+
+    @Column(length = 500)
+    private String notes;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public enum PaymentMethod {
-        MP, CASH
+        MP, CASH, TRANSFER
     }
 
     public enum PaymentStatus {

@@ -24,9 +24,13 @@ public class Subscription extends TenantEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id")
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id", nullable = true)
     private MembershipPlan plan;
+
+    // Snapshot del nombre del plan al momento de la suscripción
+    @Column(name = "plan_name_snapshot", length = 200)
+    private String planNameSnapshot;
 
     public User getUser() {
         return user;

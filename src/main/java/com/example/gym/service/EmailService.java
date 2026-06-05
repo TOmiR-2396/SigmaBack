@@ -46,6 +46,83 @@ public class EmailService {
         }
     }
 
+    public void sendContactEmail(String toEmail, String gymName, String subject, String message) {
+        try {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+            helper.setFrom(new InternetAddress(mailFrom));
+            helper.setTo(toEmail);
+            helper.setSubject("[GestiGym] " + subject);
+            String html = "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>"
+                + "<div style='background:#14213D;padding:20px;text-align:center;'>"
+                + "<h2 style='color:#fff;margin:0;'>GESTIGYM</h2></div>"
+                + "<div style='padding:24px;'>"
+                + "<p>Hola <strong>" + gymName + "</strong>,</p>"
+                + "<p>" + message.replace("\n", "<br>") + "</p>"
+                + "</div>"
+                + "<div style='background:#f4f4f4;padding:16px;text-align:center;font-size:12px;color:#666;'>"
+                + "GestiGym — Plataforma de gestión para gimnasios</div></div>";
+            helper.setText(html, true);
+            mailSender.send(msg);
+        } catch (Exception ignored) {}
+    }
+
+    public void sendPaymentReceipt(String toEmail, String memberName,
+                                   String planName, double amount,
+                                   String method, String startDate, String endDate,
+                                   String mpPaymentId) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(new InternetAddress(mailFrom));
+            helper.setTo(toEmail);
+            helper.setSubject("Comprobante de pago - Sigma Gym");
+            helper.setText(buildReceiptHtml(memberName, planName, amount, method,
+                                            startDate, endDate, mpPaymentId), true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            // No interrumpir el flujo de pago si el mail falla
+        }
+    }
+
+    private String buildReceiptHtml(String memberName, String planName, double amount,
+                                    String method, String startDate, String endDate,
+                                    String mpPaymentId) {
+        String amountStr = String.format("$ %,.2f ARS", amount).replace(",", "X").replace(".", ",").replace("X", ".");
+        String methodLabel = "MP".equals(method) ? "Mercado Pago" : "Efectivo";
+        String paymentRow = mpPaymentId != null
+            ? "<tr><td style='padding:8px 0;color:#666;'>N° de pago</td><td style='padding:8px 0;text-align:right;font-weight:600;'>" + mpPaymentId + "</td></tr>"
+            : "";
+
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body style='margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;'>" +
+            "<div style='max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);'>" +
+            // Header
+            "<div style='background:#14213D;padding:32px 32px 24px;text-align:center;'>" +
+            "<h1 style='color:#fff;margin:0;font-size:24px;letter-spacing:1px;'>SIGMA GYM</h1>" +
+            "<p style='color:#9AB8E4;margin:6px 0 0;font-size:13px;'>Comprobante de pago</p>" +
+            "</div>" +
+            // Body
+            "<div style='padding:32px;'>" +
+            "<p style='color:#333;font-size:15px;margin:0 0 24px;'>Hola <strong>" + memberName + "</strong>,<br>tu pago fue procesado exitosamente.</p>" +
+            "<table style='width:100%;border-collapse:collapse;border-top:1px solid #eee;'>" +
+            "<tr><td style='padding:12px 0;color:#666;'>Plan</td><td style='padding:12px 0;text-align:right;font-weight:700;color:#14213D;font-size:16px;'>" + planName + "</td></tr>" +
+            "<tr style='background:#f9f9f9;'><td style='padding:8px 12px;color:#666;'>Vigencia</td><td style='padding:8px 12px;text-align:right;font-weight:600;'>" + startDate + " → " + endDate + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#666;'>Método de pago</td><td style='padding:8px 0;text-align:right;font-weight:600;'>" + methodLabel + "</td></tr>" +
+            paymentRow +
+            "<tr style='border-top:2px solid #14213D;'><td style='padding:16px 0;font-size:17px;font-weight:700;color:#14213D;'>Total abonado</td>" +
+            "<td style='padding:16px 0;text-align:right;font-size:22px;font-weight:800;color:#14213D;'>" + amountStr + "</td></tr>" +
+            "</table>" +
+            "<div style='background:#f0f9f4;border:1px solid #b6e8c8;border-radius:8px;padding:14px 18px;margin-top:24px;'>" +
+            "<p style='margin:0;color:#1a7a40;font-size:13px;'>Tu membresía está activa. Podés reservar tus turnos desde la app.</p>" +
+            "</div>" +
+            "</div>" +
+            // Footer
+            "<div style='background:#f9f9f9;padding:20px 32px;text-align:center;border-top:1px solid #eee;'>" +
+            "<p style='margin:0;font-size:12px;color:#999;'>Este es un comprobante automático. No respondas este email.<br>© 2026 Sigma Gym</p>" +
+            "</div>" +
+            "</div></body></html>";
+    }
+
     private String buildPasswordResetHtml(String resetUrl, String userEmail) {
         return "<!DOCTYPE html>" +
                "<html>" +

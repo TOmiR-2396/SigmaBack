@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,31 +26,30 @@ public class MembershipPlanController {
     // Obtener membresía activa de un usuario por su id, con tiempo restante
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getMembershipByUserId(@PathVariable("userId") Long userId) {
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findAll().stream()
-            .filter(s -> s.getUser().getId().equals(userId) && s.getStatus() == Subscription.Status.ACTIVE)
-            .findFirst();
+        Optional<Subscription> subscriptionOpt = subscriptionRepository.findActiveByUserId(userId);
         if (subscriptionOpt.isEmpty()) {
-            return ResponseEntity.ok("El usuario no tiene membresía activa");
+            return ResponseEntity.ok(null);
         }
-        Subscription subscription = subscriptionOpt.get();
-        Long planId = subscription.getPlan().getId();
-        com.example.gym.model.MembershipPlan plan = membershipPlanRepository.findById(planId).orElse(null);
-        if (plan == null) {
-            return ResponseEntity.status(500).body("Error: No se encontró el plan de membresía.");
-        }
+        Subscription sub = subscriptionOpt.get();
+        MembershipPlan plan = sub.getPlan();
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate endDate = subscription.getEndDate();
+        java.time.LocalDate endDate = sub.getEndDate();
         long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, endDate);
-        com.example.gym.dto.MembershipInfoDTO dto = new com.example.gym.dto.MembershipInfoDTO();
-        dto.planId = plan.getId();
-        dto.planName = plan.getName();
-        dto.durationMonths = plan.getDurationMonths();
-        dto.price = plan.getPrice();
-    dto.daysPerWeek = plan.getDaysPerWeek();
-        dto.startDate = subscription.getStartDate();
-        dto.endDate = endDate;
-        dto.status = subscription.getStatus().name();
-        dto.daysLeft = daysLeft > 0 ? daysLeft : 0;
+
+        java.util.Map<String, Object> planInfo = new java.util.HashMap<>();
+        planInfo.put("id",          plan.getId());
+        planInfo.put("name",        plan.getName());
+        planInfo.put("price",       plan.getPrice());
+        planInfo.put("daysPerWeek", plan.getDaysPerWeek());
+        planInfo.put("durationMonths", plan.getDurationMonths());
+
+        java.util.Map<String, Object> dto = new java.util.HashMap<>();
+        dto.put("plan",       planInfo);
+        dto.put("startDate",  sub.getStartDate().toString());
+        dto.put("expiresAt",  endDate.toString());
+        dto.put("status",     sub.getStatus().name());
+        dto.put("daysLeft",   daysLeft > 0 ? daysLeft : 0);
+        dto.put("connected",  true);
         return ResponseEntity.ok(dto);
     }
 
@@ -77,12 +77,9 @@ public class MembershipPlanController {
         plan.setName(planDto.name);
         plan.setDurationMonths(planDto.durationMonths);
         plan.setPrice(planDto.price);
-        plan.setDaysPerWeek(planDto.daysPerWeek);
-        if (plan.getDaysPerWeek() == null || plan.getDaysPerWeek() < 1 || plan.getDaysPerWeek() > 5) {
-            return ResponseEntity.badRequest().body("daysPerWeek debe estar entre 1 y 5");
-        }
-        if (plan.getName().equalsIgnoreCase("Funcional Kids") && plan.getDurationMonths() != 2) {
-            return ResponseEntity.badRequest().body("Funcional Kids solo puede ser de 2 días a la semana");
+        // daysPerWeek es opcional — null o 0 significa sin restricción semanal
+        if (planDto.daysPerWeek != null && planDto.daysPerWeek > 0) {
+            plan.setDaysPerWeek(planDto.daysPerWeek);
         }
         membershipPlanRepository.save(plan);
         com.example.gym.dto.MembershipPlanDTO dto = new com.example.gym.dto.MembershipPlanDTO();
@@ -128,6 +125,76 @@ public class MembershipPlanController {
         return ResponseEntity.ok(dto);
     }
 
+    // Editar plan (solo OWNER/ADMIN)
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePlan(@PathVariable("id") Long id,
+                                        @RequestBody com.example.gym.dto.MembershipPlanDTO planDto) {
+        Optional<MembershipPlan> planOpt = membershipPlanRepository.findById(id);
+        if (planOpt.isEmpty()) return ResponseEntity.notFound().build();
+        MembershipPlan plan = planOpt.get();
+        if (planDto.name != null && !planDto.name.isBlank()) plan.setName(planDto.name);
+        if (planDto.price != null)         plan.setPrice(planDto.price);
+        if (planDto.durationMonths != null) plan.setDurationMonths(planDto.durationMonths);
+        if (planDto.daysPerWeek != null && planDto.daysPerWeek > 0) {
+            plan.setDaysPerWeek(planDto.daysPerWeek);
+        } else if (planDto.daysPerWeek != null && planDto.daysPerWeek == 0) {
+            plan.setDaysPerWeek(null); // 0 = sin restricción
+        }
+        membershipPlanRepository.save(plan);
+        com.example.gym.dto.MembershipPlanDTO dto = new com.example.gym.dto.MembershipPlanDTO();
+        dto.id = plan.getId(); dto.name = plan.getName();
+        dto.durationMonths = plan.getDurationMonths(); dto.price = plan.getPrice();
+        dto.daysPerWeek = plan.getDaysPerWeek();
+        return ResponseEntity.ok(dto);
+    }
+
+    // Eliminar plan (solo OWNER) — desvincula suscripciones y pagos antes de borrar
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> deletePlan(@PathVariable("id") Long id) {
+        Optional<MembershipPlan> planOpt = membershipPlanRepository.findById(id);
+        if (planOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String planName = planOpt.get().getName();
+        double planPrice = planOpt.get().getPrice() != null ? planOpt.get().getPrice() : 0;
+        // Desvincular suscripciones (guardar snapshot del nombre)
+        subscriptionRepository.findAll().stream()
+                .filter(s -> s.getPlan() != null && s.getPlan().getId().equals(id))
+                .forEach(s -> {
+                    s.setPlanNameSnapshot(planName);
+                    s.setPlan(null);
+                    subscriptionRepository.save(s);
+                });
+        // Desvincular registros de pago (guardar snapshot)
+        paymentRecordRepository.findAll().stream()
+                .filter(r -> r.getPlan() != null && r.getPlan().getId().equals(id))
+                .forEach(r -> {
+                    r.setPlanNameSnapshot(planName);
+                    r.setPlanPriceSnapshot(planPrice);
+                    r.setPlan(null);
+                    paymentRecordRepository.save(r);
+                });
+        membershipPlanRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Plan eliminado correctamente"));
+    }
+
+    // Cancelar suscripción activa de un usuario (solo OWNER/ADMIN)
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @DeleteMapping("/subscriptions/{userId}")
+    public ResponseEntity<?> cancelUserSubscription(@PathVariable("userId") Long userId) {
+        Optional<Subscription> subOpt = subscriptionRepository.findActiveByUserId(userId);
+        if (subOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("El usuario no tiene suscripción activa");
+        }
+        Subscription sub = subOpt.get();
+        sub.setStatus(Subscription.Status.CANCELED);
+        subscriptionRepository.save(sub);
+        return ResponseEntity.ok(Map.of("message", "Suscripción cancelada correctamente"));
+    }
+
     // Asignar membresía a usuario (solo OWNER)
     @PostMapping("/assign")
     public ResponseEntity<?> assignPlanToUser(@RequestParam("userId") Long userId,
@@ -165,10 +232,10 @@ public class MembershipPlanController {
         subscription.setPlan(planOpt.get());
         subscription.setStartDate(java.time.LocalDate.now());
         Integer duration = planOpt.get().getDurationMonths();
-        if (duration == null || duration < 1) {
-            duration = 1;
-        }
-        subscription.setEndDate(java.time.LocalDate.now().plusMonths(duration));
+        java.time.LocalDate endDate = (duration == null || duration == 0)
+                ? java.time.LocalDate.now().plusDays(7)
+                : java.time.LocalDate.now().plusMonths(duration);
+        subscription.setEndDate(endDate);
         subscription.setStatus(Subscription.Status.ACTIVE);
         subscriptionRepository.save(subscription);
 
@@ -193,12 +260,23 @@ public class MembershipPlanController {
     public ResponseEntity<?> registerCashPayment(
             @RequestParam("userId") Long userId,
             @RequestParam("planId") Long planId,
+            @RequestParam(value = "paymentDate", required = false) String paymentDateStr,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "method", required = false, defaultValue = "CASH") String methodStr,
             Authentication auth) {
         try {
             User registeredBy = (User) auth.getPrincipal();
-            Subscription sub = paymentService.registerCashPayment(userId, planId, registeredBy);
+            LocalDate paymentDate = paymentDateStr != null ? LocalDate.parse(paymentDateStr) : null;
+            PaymentRecord.PaymentMethod method;
+            try {
+                method = PaymentRecord.PaymentMethod.valueOf(methodStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Método inválido. Valores aceptados: CASH, TRANSFER, MP");
+            }
+            Subscription sub = paymentService.registerCashPayment(userId, planId, registeredBy,
+                                                                   paymentDate, notes, method);
             return ResponseEntity.ok(Map.of(
-                "message", "Pago en efectivo registrado correctamente",
+                "message", "Pago registrado correctamente",
                 "subscriptionId", sub.getId(),
                 "endDate", sub.getEndDate()
             ));
@@ -237,8 +315,13 @@ public class MembershipPlanController {
         dto.put("status", r.getStatus().name());
         dto.put("mpPaymentId", r.getMpPaymentId());
         dto.put("createdAt", r.getCreatedAt());
-        dto.put("planName", r.getPlan() != null ? r.getPlan().getName() : null);
-        dto.put("planPrice", r.getPlan() != null ? r.getPlan().getPrice() : null);
+        dto.put("paymentDate", r.getPaymentDate() != null ? r.getPaymentDate().toString()
+                             : r.getCreatedAt() != null ? r.getCreatedAt().toLocalDate().toString() : null);
+        dto.put("notes", r.getNotes());
+        dto.put("planName",  r.getPlan() != null ? r.getPlan().getName()
+                           : r.getPlanNameSnapshot()  != null ? r.getPlanNameSnapshot()  : "-");
+        dto.put("planPrice", r.getPlan() != null ? r.getPlan().getPrice()
+                           : r.getPlanPriceSnapshot() != null ? r.getPlanPriceSnapshot() : r.getAmount());
         dto.put("registeredBy", r.getRegisteredBy() != null ? r.getRegisteredBy().getEmail() : null);
         return dto;
     }

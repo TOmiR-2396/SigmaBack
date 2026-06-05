@@ -7,6 +7,7 @@ import com.example.gym.model.Subscription;
 import com.example.gym.model.User;
 import com.example.gym.repository.MembershipPlanRepository;
 import com.example.gym.repository.PaymentRecordRepository;
+import com.example.gym.repository.UserRepository;
 import com.example.gym.service.MercadoPagoCredentialService;
 import com.example.gym.service.PaymentService;
 import com.example.gym.tenant.TenantContext;
@@ -54,11 +55,17 @@ public class MercadoPagoController {
     @Autowired
     private MercadoPagoCredentialService mpCredentials;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Value("${mercadopago.webhook-strict:false}")
     private boolean webhookStrict;
 
     @Value("${mercadopago.frontend-url:http://localhost:5173}")
     private String frontendBase;
+
+    @Value("${provincial.tax.percent:5.0}")
+    private double provincialTaxPercent;
 
     /**
      * Procesa un pago enviado por el Payment Brick (Checkout API / Transparent Checkout).
@@ -143,7 +150,11 @@ public class MercadoPagoController {
      */
     @GetMapping("/api/payments/config")
     public ResponseEntity<?> getPaymentsConfig() {
-        return ResponseEntity.ok(Map.of("publicKey", mpCredentials.getIntegratorPublicKey()));
+        return ResponseEntity.ok(Map.of(
+            "publicKey", mpCredentials.getIntegratorPublicKey(),
+            "commissionPercent", mpCredentials.getCommissionPercent(),
+            "provincialTaxPercent", provincialTaxPercent
+        ));
     }
 
     /**
@@ -220,27 +231,44 @@ public class MercadoPagoController {
             }
 
             ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> item = Map.of(
-                "title", title,
-                "quantity", qty,
-                "unit_price", price,
-                "currency_id", req.currency != null ? req.currency : "ARS"
-            );
+            Map<String, Object> item = new HashMap<>();
+            item.put("title", title);
+            item.put("description", title);
+            item.put("quantity", qty);
+            item.put("unit_price", price);
+            item.put("currency_id", req.currency != null ? req.currency : "ARS");
+
             String base = frontendBase.replaceAll("/+$", "");
             Map<String, Object> backUrls = Map.of(
-                "success", base + "/payment/success",
-                "pending", base + "/payment/pending",
-                "failure", base + "/payment/failure"
+                "success", base + "/member/payment/success",
+                "pending", base + "/member/payment/success",
+                "failure", base + "/member/payment/failure"
             );
+
+            // Datos del comprador: prioridad al usuario registrado, fallback al email del request
+            Map<String, Object> payer = new HashMap<>();
+            if (req.userId != null) {
+                userRepository.findById(req.userId).ifPresent(u -> {
+                    payer.put("email", u.getEmail());
+                    if (u.getFirstName() != null) payer.put("first_name", u.getFirstName());
+                    if (u.getLastName()  != null) payer.put("last_name",  u.getLastName());
+                });
+            }
+            if (!payer.containsKey("email") && req.payerEmail != null && !req.payerEmail.isBlank()) {
+                payer.put("email", req.payerEmail);
+            }
+
             Map<String, Object> preferenceBody = new HashMap<>();
             preferenceBody.put("items", List.of(item));
             preferenceBody.put("back_urls", backUrls);
+            preferenceBody.put("auto_return", "approved");
             preferenceBody.put("external_reference", externalRef);
-            if (req.payerEmail != null && !req.payerEmail.isBlank()) {
-                preferenceBody.put("payer", Map.of("email", req.payerEmail));
-            }
-            // Split 1:1 Marketplace: comisión de gestigym sobre cada pago
-            double fee = mpCredentials.calculateFee(price);
+            preferenceBody.put("notification_url", base + "/webhooks/mercadopago");
+            if (!payer.isEmpty()) preferenceBody.put("payer", payer);
+            // El member paga precio + comisión GestiGym
+            double fee         = mpCredentials.calculateFee(price);
+            double totalAmount = price + fee;
+            item.put("unit_price", totalAmount);
             if (fee > 0) {
                 preferenceBody.put("marketplace_fee", fee);
             }
@@ -257,12 +285,15 @@ public class MercadoPagoController {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 Map<String, Object> respBody = mapper.readValue(response.body(), new TypeReference<Map<String, Object>>(){});
-                Map<String, Object> resp = Map.of(
-                    "preferenceId", respBody.get("id"),
-                    "initPoint", respBody.get("init_point"),
-                    "sandboxInitPoint", respBody.get("sandbox_init_point"),
-                    "publicKey", mpCredentials.getIntegratorPublicKey()
-                );
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("preferenceId", respBody.get("id"));
+                resp.put("initPoint", respBody.get("init_point"));
+                resp.put("sandboxInitPoint", respBody.get("sandbox_init_point"));
+                resp.put("publicKey", mpCredentials.getIntegratorPublicKey());
+                resp.put("planPrice", price);
+                resp.put("feeAmount", fee);
+                resp.put("totalAmount", totalAmount);
+                resp.put("commissionPercent", mpCredentials.getCommissionPercent());
                 return ResponseEntity.ok(resp);
             } else {
                 logger.error("[MP] Error de API: status={} body={}", response.statusCode(), response.body());
@@ -428,7 +459,7 @@ public class MercadoPagoController {
             org.springframework.security.core.Authentication auth) {
         try {
             User registeredBy = (User) auth.getPrincipal();
-            Subscription sub = paymentService.registerCashPayment(userId, planId, registeredBy);
+            Subscription sub = paymentService.registerCashPayment(userId, planId, registeredBy, null, null, null);
             return ResponseEntity.ok(Map.of(
                 "message", "Pago en efectivo registrado correctamente",
                 "subscriptionId", sub.getId(),
@@ -450,8 +481,10 @@ public class MercadoPagoController {
         dto.put("status", r.getStatus().name());
         dto.put("mpPaymentId", r.getMpPaymentId());
         dto.put("createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
-        dto.put("planName", r.getPlan() != null ? r.getPlan().getName() : null);
-        dto.put("planPrice", r.getPlan() != null ? r.getPlan().getPrice() : null);
+        dto.put("planName", r.getPlan() != null ? r.getPlan().getName()
+                           : r.getPlanNameSnapshot() != null ? r.getPlanNameSnapshot() : "-");
+        dto.put("planPrice", r.getPlan() != null ? r.getPlan().getPrice()
+                            : r.getPlanPriceSnapshot() != null ? r.getPlanPriceSnapshot() : r.getAmount());
         dto.put("registeredBy", r.getRegisteredBy() != null ? r.getRegisteredBy().getEmail() : null);
         return dto;
     }

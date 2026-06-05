@@ -20,4 +20,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findInactiveCandidates(@Param("tenantId") String tenantId,
                                       @Param("cutoffDateTime") LocalDateTime cutoffDateTime,
                                       @Param("cutoffDate") LocalDate cutoffDate);
+
+    List<User> findByTenantIdAndRole(String tenantId, User.UserRole role);
+
+    @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND " +
+           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%',:name,'%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%',:name,'%'))) ")
+    List<User> findByNameLike(@Param("tenantId") String tenantId, @Param("name") String name);
 }

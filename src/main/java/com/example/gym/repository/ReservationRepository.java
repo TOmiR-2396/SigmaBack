@@ -57,5 +57,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findFutureConfirmedByUser(@Param("userId") Long userId,
                                                 @Param("startDate") LocalDate startDate);
 
-
+    // Contar asistencias efectivas (attended=true) en una semana para un usuario
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.user.id = :userId AND r.attended = true AND r.date BETWEEN :weekStart AND :weekEnd")
+    Long countAttendedInWeek(@Param("userId") Long userId,
+                             @Param("weekStart") LocalDate weekStart,
+                             @Param("weekEnd") LocalDate weekEnd);
 }

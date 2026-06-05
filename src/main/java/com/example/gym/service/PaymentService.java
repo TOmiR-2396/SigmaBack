@@ -31,6 +31,7 @@ public class PaymentService {
     private final MembershipPlanRepository planRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRecordRepository paymentRecordRepository;
+    private final EmailService emailService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -88,8 +89,11 @@ public class PaymentService {
             Subscription sub = Subscription.builder()
                     .user(user)
                     .plan(plan)
+                    .planNameSnapshot(plan.getName())
                     .startDate(today)
-                    .endDate(today.plusMonths(plan.getDurationMonths()))
+                    .endDate(plan.getDurationMonths() == 0
+                            ? today.plusDays(7)
+                            : today.plusMonths(plan.getDurationMonths()))
                     .status(Subscription.Status.ACTIVE)
                     .build();
             subscriptionRepository.save(sub);
@@ -98,6 +102,8 @@ public class PaymentService {
             PaymentRecord record = PaymentRecord.builder()
                     .user(user)
                     .plan(plan)
+                    .planNameSnapshot(plan.getName())
+                    .planPriceSnapshot(plan.getPrice())
                     .amount(plan.getPrice())
                     .method(PaymentRecord.PaymentMethod.MP)
                     .status(PaymentRecord.PaymentStatus.APPROVED)
@@ -108,53 +114,83 @@ public class PaymentService {
             log.info("[Payment] Suscripción activada — usuario={} plan='{}' hasta={} (pago {})",
                     userId, plan.getName(), sub.getEndDate(), mpPaymentId);
 
+            // Enviar comprobante por email
+            String memberName = (user.getFirstName() != null ? user.getFirstName() : "") +
+                                (user.getLastName()  != null ? " " + user.getLastName() : "");
+            emailService.sendPaymentReceipt(
+                user.getEmail(), memberName.trim(),
+                plan.getName(), plan.getPrice(),
+                "MP", sub.getStartDate().toString(), sub.getEndDate().toString(),
+                mpPaymentId
+            );
+
         } finally {
             TenantContext.clear();
         }
     }
 
     /**
-     * Registra un pago en efectivo y activa la suscripción.
+     * Registra un pago manual (efectivo o transferencia) y activa la suscripción.
      *
      * @param userId        ID del usuario
      * @param planId        ID del plan
      * @param registeredBy  Usuario que registra el pago (owner/trainer)
+     * @param paymentDate   Fecha real del pago (null = hoy)
+     * @param notes         Observaciones (deudas, créditos, etc.)
+     * @param method        Método de pago (CASH o TRANSFER; null = CASH)
      * @return La suscripción creada
      */
     @Transactional
-    public Subscription registerCashPayment(Long userId, Long planId, User registeredBy) {
+    public Subscription registerCashPayment(Long userId, Long planId, User registeredBy,
+                                            LocalDate paymentDate, String notes,
+                                            PaymentRecord.PaymentMethod method) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + userId));
         MembershipPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Plan no encontrado: " + planId));
 
-        // Cancelar suscripciones activas anteriores
         cancelActiveSubscriptions(user);
 
-        // Crear nueva suscripción
         LocalDate today = LocalDate.now();
         Subscription sub = Subscription.builder()
                 .user(user)
                 .plan(plan)
+                .planNameSnapshot(plan.getName())
                 .startDate(today)
-                .endDate(today.plusMonths(plan.getDurationMonths()))
+                .endDate(plan.getDurationMonths() == 0
+                        ? today.plusDays(7)
+                        : today.plusMonths(plan.getDurationMonths()))
                 .status(Subscription.Status.ACTIVE)
                 .build();
         subscriptionRepository.save(sub);
 
-        // Guardar historial de pago en efectivo
+        PaymentRecord.PaymentMethod resolvedMethod = method != null ? method : PaymentRecord.PaymentMethod.CASH;
         PaymentRecord record = PaymentRecord.builder()
                 .user(user)
                 .plan(plan)
+                .planNameSnapshot(plan.getName())
+                .planPriceSnapshot(plan.getPrice())
                 .amount(plan.getPrice())
-                .method(PaymentRecord.PaymentMethod.CASH)
+                .method(resolvedMethod)
                 .status(PaymentRecord.PaymentStatus.APPROVED)
                 .registeredBy(registeredBy)
+                .paymentDate(paymentDate != null ? paymentDate : today)
+                .notes(notes)
                 .build();
         paymentRecordRepository.save(record);
 
-        log.info("[Payment] Pago en efectivo registrado — usuario={} plan='{}' registradoPor={}",
-                userId, plan.getName(), registeredBy != null ? registeredBy.getId() : "system");
+        log.info("[Payment] Pago manual registrado — usuario={} plan='{}' método={} fecha={} registradoPor={}",
+                userId, plan.getName(), resolvedMethod, record.getPaymentDate(),
+                registeredBy != null ? registeredBy.getId() : "system");
+
+        String memberName = (user.getFirstName() != null ? user.getFirstName() : "") +
+                            (user.getLastName()  != null ? " " + user.getLastName() : "");
+        emailService.sendPaymentReceipt(
+            user.getEmail(), memberName.trim(),
+            plan.getName(), plan.getPrice(),
+            resolvedMethod.name(), sub.getStartDate().toString(), sub.getEndDate().toString(),
+            null
+        );
 
         return sub;
     }
